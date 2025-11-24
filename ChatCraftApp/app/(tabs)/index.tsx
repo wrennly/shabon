@@ -1,12 +1,14 @@
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 import { useState, useEffect } from 'react';
+import { router } from 'expo-router';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
+import { authService } from '@/services/api';
 
 const API_BASE_URL = 'https://chatcraft-api-v3.onrender.com';
 
@@ -15,8 +17,16 @@ export default function HomeScreen() {
   const [apiMessage, setApiMessage] = useState<string>('');
 
   useEffect(() => {
+    checkLoginStatus();
     checkApiHealth();
   }, []);
+
+  const checkLoginStatus = async () => {
+    const isLoggedIn = await authService.isLoggedIn();
+    if (!isLoggedIn) {
+      router.replace('/login');
+    }
+  };
 
   const checkApiHealth = async () => {
     try {
