@@ -1,0 +1,29 @@
+// tsconfig.json (chatcraft_ui のルールブックだよ！)
+{
+  "compilerOptions": {
+    "target": "es5", // 古（ふる）いブラウザでも動（うご）くように翻訳（ほんやく）してね
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    // ✨✨✨ ↓↓ これが一番（いちばん）大事（だいじ）！ ↓↓ ✨✨✨
+    "allowJs": true, // 「ふつうのレゴ (.js) も仲間（なかま）に入（い）れてあげてね！」
+    // ✨✨✨ ↑↑ ココだよ！ ↑↑ ✨✨✨
+    "skipLibCheck": true, // 「翻訳（ほんやく）ガイド」の中（なか）までは細（こま）かくチェックしなくていいよ
+    "esModuleInterop": true, // React の `import` をうまくやてね
+    "allowSyntheticDefaultImports": true, // `import React from 'react'` を許（ゆる）してね
+    "strict": true, // 「ルール」は、まぁまぁ厳（きび）しくいこう！
+    "forceConsistentCasingInFileNames": true, // ファイルの大文字（おおもじ）・小文字（こもじ）をしっかり見（み）てね
+    "noFallthroughCasesInSwitch": true, // `switch` 文（ぶん）の抜（ぬ）けを教（おし）えてね
+    "module": "esnext", // 最新（さいしん）の「レゴの組（く）み方（かた）」で
+    "moduleResolution": "node", // `npm` のルールで部品（ぶひん）を探（さが）してね
+    "resolveJsonModule": true, // `json` ファイルも `import` させてね
+    "isolatedModules": true, // 1ファイルずつ翻訳（ほんやく）できるようにしてね
+    "noEmit": true, // (React が翻訳（ほんやく）するから、TSくんは「チェック」だけでいいよ！)
+    "jsx": "react-jsx" // 最新（さいしん）の React の書（か）き方（かた）を使（つか）うよ
+  },
+  "include": [
+    "src" // 「ルールブック」がチェックするのは `src` フォルダの中（なか）だけだよ
+  ]
+}
