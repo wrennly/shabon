@@ -123,6 +123,7 @@ frontend_url = os.environ.get("FRONTEND_URL", "")
 origins = [
     frontend_url,
     "http://localhost:3000",
+    "http://localhost:8081",  # Expo default port
     "https://dashboard.uptimerobot.com"
 ]
 app.add_middleware(

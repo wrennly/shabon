@@ -8,28 +8,29 @@ import { AppHeader } from '@/components/app-header';
 interface Mate {
   id: number;
   mate_name: string;
-  mate_id: string | null;
-  is_public: boolean;
-  last_message: string | null;
+  mate_id: string;
+  last_message?: string;
+  is_public?: boolean;
 }
 
-export default function ExploreScreen() {
+export default function MatesScreen() {
   const theme = useTheme();
-  const [publicMates, setPublicMates] = useState<any[]>([]);
+  const [mates, setMates] = useState<Mate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadPublicMates();
+    loadMates();
   }, []);
 
-  const loadPublicMates = async () => {
+  const loadMates = async () => {
     try {
-      const response = await apiClient.get('/mates/public');
-      setPublicMates(response.data);
+      setLoading(true);
+      const response = await apiClient.get('/mates/?filter=chatted_only');
+      setMates(response.data);
     } catch (error) {
-      console.error('Failed to load public mates:', error);
+      console.error('Failed to load mates:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -38,19 +39,22 @@ export default function ExploreScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadPublicMates();
+    loadMates();
   };
 
   const handleMateSelect = (mate: Mate) => {
     router.push(`/chat/${mate.id}`);
   };
 
-  const filteredMates = publicMates.filter((mate) =>
+  const filteredMates = mates.filter(mate =>
     mate.mate_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderMateItem = ({ item }: { item: Mate }) => (
-    <Card style={styles.mateCard} onPress={() => handleMateSelect(item)}>
+    <Card 
+      style={styles.mateCard} 
+      onPress={() => handleMateSelect(item)}
+    >
       <Card.Content>
         <Text variant="titleMedium" style={styles.mateName}>
           {item.mate_name}
@@ -69,7 +73,7 @@ export default function ExploreScreen() {
     </Card>
   );
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" />
@@ -80,7 +84,7 @@ export default function ExploreScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <AppHeader title="検索">
+      <AppHeader title="チャット">
         <Searchbar
           placeholder="メイトを検索"
           onChangeText={setSearchQuery}
@@ -94,11 +98,13 @@ export default function ExploreScreen() {
         renderItem={renderMateItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text variant="bodyLarge" style={styles.emptyText}>
-              {searchQuery ? '検索結果がありません' : '公開メイトがありません'}
+              まだチャット履歴がありません
             </Text>
           </View>
         }
@@ -120,7 +126,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   searchBar: {
-    elevation: 0,
+    backgroundColor: '#f5f5f5',
   },
   listContainer: {
     padding: 16,
@@ -141,12 +147,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyContainer: {
-    padding: 32,
     alignItems: 'center',
+    paddingVertical: 40,
   },
   emptyText: {
     color: '#888',
-    textAlign: 'center',
   },
 });
-

@@ -1,39 +1,77 @@
-# Welcome to your Expo app 👋
+# ChatCraft Mobile App 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+ChatCraftのReact Native (Expo)版モバイルアプリです。
 
-## Get started
+## セットアップ
 
-1. Install dependencies
+1. 依存関係のインストール
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. 環境変数の設定
+
+   `.env.example`をコピーして`.env`ファイルを作成し、必要な値を設定してください。
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   **必須の環境変数:**
+   - `EXPO_PUBLIC_API_URL`: バックエンドAPIのURL
+     - **Web開発**: `http://localhost:8000`
+     - **モバイル開発**: お使いのコンピュータのローカルIPアドレスを使用（例: `http://192.168.1.100:8000`）
+     - **本番環境**: `https://chat-craft-api.onrender.com`
+   - `EXPO_PUBLIC_FEEDBACK_FORM_URL`: フィードバックフォームのURL
+
+   **ローカルIPアドレスの確認方法:**
+   ```bash
+   # macOS/Linux
+   ifconfig | grep "inet " | grep -v 127.0.0.1
+   
+   # Windows
+   ipconfig
+   ```
+
+   **オプションの環境変数:**
+   - `EXPO_PUBLIC_GA_MEASUREMENT_ID`: Google Analytics 4測定ID（アクセス解析）
+   - `EXPO_PUBLIC_SENTRY_DSN`: Sentryのプロジェクト識別子（エラー監視）
+   - `EXPO_PUBLIC_ENVIRONMENT`: 環境名（development/staging/production）
+   - `EXPO_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuthクライアントID（将来の実装用）
+
+3. アプリの起動
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+   **モバイルデバイスでのテスト:**
+   
+   モバイルデバイス（実機またはエミュレータ）でテストする場合、`localhost`では接続できません。
+   詳しくは [MOBILE_SETUP.md](./MOBILE_SETUP.md) を参照してください。
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+## 開発
+
+以下の方法でアプリを実行できます:
+
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [Expo Go](https://expo.dev/go) (物理デバイス)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+**app**ディレクトリ内のファイルを編集することで開発を開始できます。このプロジェクトは[file-based routing](https://docs.expo.dev/router/introduction)を使用しています。
 
-## Get a fresh project
+## 機能
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- ✅ ユーザー認証
+- ✅ チャット機能（AI応答）
+- ✅ メイト管理（作成・編集・削除）
+- ✅ 公開メイトの探索
+- ✅ ダークモード対応
+- ✅ プロフィール設定
+- ✅ フィードバック送信
+- ✅ Google Analytics 4統合（Web/Native）
+- ✅ Sentryエラー監視
 
 ## Learn more
 
