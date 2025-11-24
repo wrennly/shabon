@@ -57,3 +57,5 @@ alembic/versions/__pycache__/
 # Cache
 .cache/
 *.cache
+
+*.code-workspace
