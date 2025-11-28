@@ -13,6 +13,7 @@ import os
 import redis
 from redis import Redis
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 
 from models import MAttributes
 
@@ -81,7 +82,10 @@ def get_attributes_cache(session: Session) -> List[MAttributes]:
             cached_data = redis_client.get(cache_key)
             if cached_data:
                 print(f"✅ Cache hit (Redis): {cache_key}")
-                return session.exec(select(MAttributes)).all()  # Return fresh objects
+                # Return fresh objects with eager loaded options
+                return session.exec(
+                    select(MAttributes).options(selectinload(MAttributes.options))
+                ).all()
         except Exception as e:
             print(f"⚠️  Redis get error: {e}")
     
@@ -92,7 +96,7 @@ def get_attributes_cache(session: Session) -> List[MAttributes]:
     
     # Fetch from database
     print(f"📊 Cache miss: {cache_key} - fetching from DB")
-    statement = select(MAttributes)
+    statement = select(MAttributes).options(selectinload(MAttributes.options))
     attributes = session.exec(statement).all()
     
     # Store in both caches
