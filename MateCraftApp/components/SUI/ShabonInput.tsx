@@ -1,8 +1,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Canvas, LinearGradient, RoundedRect, vec } from '@shopify/react-native-skia';
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TextInputProps, ViewStyle, Text, View } from 'react-native';
-import { ShabonCard } from './ShabonCard';
+import { StyleSheet, TextInput, TextInputProps, ViewStyle, Text, View, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Colors } from '@/constants/theme';
 
 interface ShabonInputProps extends TextInputProps {
@@ -35,54 +34,27 @@ export const ShabonInput: React.FC<ShabonInputProps> = ({
     // Adjust height for multiline if not specified
     const finalHeight = height === 50 && multiline ? 120 : height;
     const borderRadius = multiline ? 24 : (typeof height === 'number' ? height / 2 : 25);
-    const strokeWidth = 1.5;
-
-    // Resolve width for Canvas (needs number)
-    // If width is string (percentage), we rely on onLayout or just use a large enough number for gradient
-    // For simplicity, we'll use a fixed large width for gradient if width is string
-    const canvasWidth = typeof width === 'number' ? width : 1000;
 
     return (
         <View style={[styles.wrapper, containerStyle, { width: width as any }]}>
             {label && (
                 <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
             )}
-            <ShabonCard 
-                width={width} 
-                height={finalHeight} 
-                style={StyleSheet.flatten([
+            <View
+                style={[
+                    styles.blurContainer,
                     { 
+                        height: finalHeight, 
                         borderRadius: borderRadius,
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F2F4F8',
-                        borderWidth: error ? 1 : 0,
-                        borderColor: error ? '#FF3B30' : 'transparent',
-                    }
-                ])}
-                contentStyle={{ padding: 0 }} // Remove default padding to prevent text clipping
-                rainbowStrength={isFocused ? 0.5 : 0.0} // Subtle rainbow on focus
-                fillAlpha={0.0} // Transparent center (using backgroundColor instead)
-                interactive={false}
+                        borderWidth: 1,
+                        borderColor: error 
+                            ? '#FF3B30' 
+                            : (isFocused ? theme.tint : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)')),
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.05)',
+                    },
+                    containerStyle
+                ]}
             >
-                <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-                    <RoundedRect
-                        x={strokeWidth / 2}
-                        y={strokeWidth / 2}
-                        width={canvasWidth - strokeWidth} // Approximate for percentage width
-                        height={finalHeight - strokeWidth}
-                        r={borderRadius - strokeWidth / 2}
-                        style="stroke"
-                        strokeWidth={strokeWidth}
-                    >
-                        <LinearGradient
-                            start={vec(0, 0)}
-                            end={vec(0, finalHeight)}
-                            colors={isDark 
-                                ? ["rgba(255,255,255,0.25)", "rgba(255,255,255,0.05)"] 
-                                : ["rgba(255,255,255,0.6)", "rgba(255,255,255,0.1)"]
-                            }
-                        />
-                    </RoundedRect>
-                </Canvas>
                 <View style={styles.inputContainer}>
                     {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
                     <TextInput
@@ -94,6 +66,11 @@ export const ShabonInput: React.FC<ShabonInputProps> = ({
                                 textAlignVertical: multiline ? 'top' : 'center',
                                 paddingLeft: leftIcon ? 8 : 20,
                                 paddingRight: rightIcon ? 8 : 20,
+                                ...Platform.select({
+                                    web: {
+                                        outlineStyle: 'none',
+                                    } as any
+                                })
                             },
                             style
                         ]}
@@ -105,7 +82,7 @@ export const ShabonInput: React.FC<ShabonInputProps> = ({
                     />
                     {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
                 </View>
-            </ShabonCard>
+            </View>
             {error && (
                 <Text style={[styles.errorText, { color: '#FF3B30' }]}>
                     {error}
@@ -126,10 +103,14 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         opacity: 0.8,
     },
+    blurContainer: {
+        overflow: 'hidden',
+        justifyContent: 'center',
+    },
     inputContainer: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        height: '100%',
     },
     input: {
         flex: 1,

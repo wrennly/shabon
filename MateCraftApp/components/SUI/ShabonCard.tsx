@@ -6,7 +6,7 @@ import {
     vec
 } from '@shopify/react-native-skia';
 import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle, Platform, StyleProp } from 'react-native';
 import {
     Gesture,
     GestureDetector,
@@ -17,7 +17,7 @@ import Animated, {
     useSharedValue,
     withSpring
 } from 'react-native-reanimated';
-import { SHABON_SHADER_SKSL } from './ShabonShader';
+import { getShabonShader } from './ShabonShader';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -25,17 +25,17 @@ interface ShabonCardProps {
   width?: number | string;
   height?: number;
   children?: React.ReactNode;
-  style?: ViewStyle;
-  contentStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
   rainbowStrength?: number;
   fillAlpha?: number;
   interactive?: boolean;
 }
 
 const SPRING_CONFIG = {
-  damping: 10,
-  stiffness: 200,
-  mass: 0.5,
+  damping: 6,
+  stiffness: 150,
+  mass: 0.6,
 };
 
 export const ShabonCard: React.FC<ShabonCardProps> = ({
@@ -68,7 +68,7 @@ export const ShabonCard: React.FC<ShabonCardProps> = ({
     .onBegin((e) => {
       if (!interactive) return;
       pressed.value = 1;
-      scale.value = withSpring(0.95, SPRING_CONFIG);
+      scale.value = withSpring(0.92, SPRING_CONFIG);
       // Random slight skew for organic feel
       const randomSkew = Math.random() * 0.1 - 0.05;
       skewX.value = withSpring(randomSkew, SPRING_CONFIG);
@@ -100,6 +100,9 @@ export const ShabonCard: React.FC<ShabonCardProps> = ({
   const calculatedRoundness = Math.min(Math.max((borderRadius * 2) / minDim, 0), 1.0);
 
   const uniforms = useDerivedValue(() => {
+    if (Platform.OS === 'web') {
+      return {};
+    }
     return {
       iTime: time.value / 1000,
       iResolution: vec(layout.width || 300, layout.height || 200),
@@ -113,17 +116,19 @@ export const ShabonCard: React.FC<ShabonCardProps> = ({
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View 
-        style={[styles.container, { width, height }, style, animatedStyle]} 
+        style={[styles.container, { width, height } as any, style, animatedStyle]} 
         pointerEvents={interactive ? 'auto' : 'box-none'}
         onLayout={(e) => setLayout({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
       >
         {/* Background Bubble Layer */}
-        <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Fill>
-            <Shader source={SHABON_SHADER_SKSL} uniforms={uniforms} />
-          </Fill>
-          {/* Optional: Add a subtle border or highlight rect if needed */}
-        </Canvas>
+        {Platform.OS !== 'web' && (
+          <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Fill>
+              <Shader source={getShabonShader()!} uniforms={uniforms as any} />
+            </Fill>
+            {/* Optional: Add a subtle border or highlight rect if needed */}
+          </Canvas>
+        )}
 
         {/* Content Layer */}
         <View style={[styles.content, contentStyle]}>
@@ -143,11 +148,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 4,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 20,
-    elevation: 5,
+    elevation: 2,
   },
   content: {
     flex: 1,

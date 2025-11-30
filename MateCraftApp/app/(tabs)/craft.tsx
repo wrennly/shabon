@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
-import { apiClient } from '@/services/api';
+import { apiClient, authService } from '@/services/api';
 import { AppHeader } from '@/components/app-header';
 import { ShabonButton } from '@/components/SUI/ShabonButton';
 import { ShabonInput } from '@/components/SUI/ShabonInput';
@@ -10,6 +10,9 @@ import { ShabonSwitch } from '@/components/SUI/ShabonSwitch';
 import { ShabonSelect } from '@/components/SUI/ShabonSelect';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+
+import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
+import { useIsFocused } from '@react-navigation/native';
 
 interface AttributeOption {
   value: string;
@@ -31,7 +34,9 @@ interface SettingInput {
 }
 
 export default function MateBuilderScreen() {
+  const isFocused = useIsFocused();
   const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const theme = Colors[colorScheme ?? 'light'];
   const [schema, setSchema] = useState<SchemaAttribute[]>([]);
   const [formState, setFormState] = useState<Record<string, string>>({});
@@ -48,8 +53,19 @@ export default function MateBuilderScreen() {
   // const [menuVisible, setMenuVisible] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (isFocused) {
+      checkAuthAndLoad();
+    }
+  }, [isFocused]);
+
+  const checkAuthAndLoad = async () => {
+    const isLoggedIn = await authService.isLoggedIn();
+    if (!isLoggedIn) {
+      router.replace('/login');
+      return;
+    }
     loadSchema();
-  }, []);
+  };
 
   useEffect(() => {
     if (schema.length > 0 && !mateId) {
@@ -102,8 +118,12 @@ export default function MateBuilderScreen() {
         (a: SchemaAttribute, b: SchemaAttribute) => a.display_order - b.display_order
       );
       setSchema(sortedAttributes);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load schema:', error);
+      if (error.response?.status === 401) {
+        router.replace('/login');
+        return;
+      }
       setSubmitMessage('スキーマの読み込みに失敗しました');
     } finally {
       setLoading(false);
@@ -204,28 +224,32 @@ export default function MateBuilderScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.tint} />
-        <Text style={[styles.loadingText, { color: theme.text }]}>読み込み中...</Text>
-      </View>
-    );
-  }
-
   // 基本設定（display_order < 5）と詳細設定に分割
   const basicSettings = schema.filter((attr) => attr.display_order < 5);
   const advancedSettings = schema.filter((attr) => attr.display_order >= 5);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppHeader title="作成" />
-
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      <FloatingSettingsButton />
+      {loading ? (
+        <View style={{ flex: 1 }}>
+            <View style={{ paddingTop: 8 }}>
+                <AppHeader title="作成" />
+            </View>
+            <View style={[styles.centerContainer, { backgroundColor: 'transparent' }]}>
+                <ActivityIndicator size="large" color={theme.tint} />
+                <Text style={[styles.loadingText, { color: theme.text }]}>読み込み中...</Text>
+            </View>
+        </View>
+      ) : (
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.content}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          <AppHeader title="作成" />
+          <View style={styles.innerContent}>
+          
           {/* メイトID */}
           <View style={styles.mateIdContainer}>
             <View>
@@ -291,18 +315,30 @@ export default function MateBuilderScreen() {
             </Text>
           ) : null}
 
-          {/* 送信ボタン */}
-          <View style={styles.submitButtonContainer}>
+          {/* Padding for floating button */}
+          <View style={{ height: 80 }} />
+          </View>
+        </ScrollView>
+
+        {/* 送信ボタン (Fixed Bottom Right) */}
+        <View style={styles.floatingButtonContainer}>
             <ShabonButton
               title="メイトを作成"
               onPress={handleSubmit}
               loading={isSubmitting}
               disabled={isSubmitting || !!mateIdError}
               variant="primary"
+              width={160}
+              height={56}
+              borderRadius={28}
+              rainbowStrength={0}
+              style={{
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)',
+              }}
             />
-          </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
+      )}
     </View>
   );
 }
@@ -323,8 +359,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 8,
+    paddingBottom: 100, // Add more padding for bottom tab bar
+  },
+  innerContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   inputContainer: {
     marginBottom: 16,
@@ -369,6 +408,20 @@ const styles = StyleSheet.create({
   submitButtonContainer: {
     marginTop: 24,
     marginBottom: 32,
+    alignItems: 'flex-end',
+  },
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: 80, // Above tab bar
+    right: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+        width: 0,
+        height: 4,
+    },
+    shadowOpacity: 0.30,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   errorText: {
     color: '#FF3B30',

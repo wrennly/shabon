@@ -5,9 +5,7 @@ import { router } from 'expo-router';
 import { analytics, AnalyticsEvents } from '@/services/analytics';
 import { useGoogleAuth, exchangeCodeForToken, promptGoogleLoginWeb } from '@/services/google-auth';
 import * as AuthSession from 'expo-auth-session';
-import { CupertinoButton } from '@/components/ui/CupertinoButton';
-import { CupertinoInput } from '@/components/ui/CupertinoInput';
-import { CupertinoCard } from '@/components/ui/CupertinoCard';
+import { ShabonButton, ShabonInput, ShabonCard } from '@/components/SUI';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
@@ -163,8 +161,8 @@ export default function LoginScreen() {
           AIキャラクターとチャット
         </Text>
 
-        <CupertinoCard style={styles.card}>
-            <CupertinoButton
+        <ShabonCard style={styles.card}>
+            <ShabonButton
               title="Googleでログイン"
               onPress={handleGoogleLogin}
               variant="secondary"
@@ -178,12 +176,13 @@ export default function LoginScreen() {
               <View style={styles.divider} />
             </View>
 
-            <CupertinoInput
+            <ShabonInput
               label="ユーザー名"
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
-              disabled={isLoading}
+              // disabled={isLoading} // ShabonInput does not have disabled prop in interface but TextInputProps has editable
+              editable={!isLoading}
               style={styles.input}
             />
             {error ? (
@@ -192,19 +191,19 @@ export default function LoginScreen() {
               </Text>
             ) : null}
 
-            <CupertinoButton
+            <ShabonButton
               title="ログイン"
               onPress={handleLogin}
               style={styles.button}
             />
 
-            <CupertinoButton
+            <ShabonButton
               title="新規登録"
               onPress={handleRegister}
               variant="outline"
               style={styles.button}
             />
-        </CupertinoCard>
+        </ShabonCard>
       </View>
     </KeyboardAvoidingView>
   );

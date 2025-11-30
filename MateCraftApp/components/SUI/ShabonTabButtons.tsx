@@ -1,0 +1,141 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import React, { useEffect } from 'react';
+import { Dimensions, StyleSheet, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ShabonButton } from './ShabonButton';
+import { Colors } from '@/constants/theme';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+interface TabItem {
+  key: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}
+
+interface ShabonTabButtonsProps {
+  tabs?: TabItem[];
+  onTabPress?: (key: string) => void;
+  activeTab?: string;
+}
+
+const DEFAULT_TABS: TabItem[] = [
+  { key: 'chat', icon: 'chatbubbles', label: 'Chat' },
+  { key: 'craft', icon: 'sparkles', label: 'Craft' },
+  { key: 'explore', icon: 'search', label: 'Search' },
+];
+
+const ACTIVE_COLOR = '#007AFF'; // Blue
+const INACTIVE_COLOR_LIGHT = '#607D8B'; // Material Blue Grey 500
+const INACTIVE_COLOR_DARK = '#B0BEC5';  // Material Blue Grey 200
+
+const TabButtonWrapper = ({ 
+  tab, 
+  isActive, 
+  onPress, 
+  isDark, 
+  theme 
+}: { 
+  tab: TabItem, 
+  isActive: boolean, 
+  onPress: (key: string) => void, 
+  isDark: boolean, 
+  theme: any 
+}) => {
+    // Removed scale animations to prevent blurring on high-res screens
+    // Only the rainbow effect will indicate the active state now
+
+    return (
+        <View style={styles.buttonContainer}>
+                <BlurView
+                    intensity={Platform.OS === 'ios' ? 20 : 10}
+                    tint={isDark ? 'dark' : 'light'}
+                    style={styles.blurCircle}
+                >
+                                    <ShabonButton
+                    size={70}
+                    onPress={() => onPress(tab.key)}
+                    icon={
+                        <Ionicons 
+                            name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
+                            size={28} 
+                            color={isActive ? ACTIVE_COLOR : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
+                        />
+                    }
+                    variant={isActive ? 'primary' : 'secondary'}
+                        // Only show rainbow on active tab, stronger intensity
+                        rainbowStrength={isActive ? 2.0 : 0.0}
+                        style={{ 
+                            backgroundColor: 'transparent',
+                        }}
+                        containerStyle={{
+                            shadowOpacity: 0,
+                            elevation: 0,
+                            backgroundColor: 'transparent',
+                        }}
+                    />
+            </BlurView>
+        </View>
+    );
+};
+
+export const ShabonTabButtons: React.FC<ShabonTabButtonsProps> = ({
+  tabs = DEFAULT_TABS,
+  onTabPress,
+  activeTab
+}) => {
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const theme = Colors[colorScheme ?? 'light'];
+
+  return (
+    <View style={[styles.wrapper, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={styles.row}>
+        {tabs.map((tab) => (
+            <TabButtonWrapper 
+                key={tab.key} 
+                tab={tab} 
+                isActive={activeTab === tab.key} 
+                onPress={(key) => onTabPress?.(key)} 
+                isDark={isDark} 
+                theme={theme} 
+            />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    pointerEvents: 'box-none',
+  },
+  row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center', // Center the buttons
+      gap: 20, // Add gap between buttons
+      width: '100%',
+  },
+  buttonContainer: {
+      borderRadius: 35,
+      overflow: 'hidden',
+  },
+  blurCircle: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden', // Ensure content is clipped to circle
+  }
+});

@@ -35,7 +35,7 @@ export const ShabonListItem: React.FC<ShabonListItemProps> = ({
         height={subtitle ? 70 : 56}
         style={{
           borderRadius: 16,
-          backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#FFFFFF',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.2)',
         }}
         contentStyle={styles.cardContent}
         rainbowStrength={0.0}

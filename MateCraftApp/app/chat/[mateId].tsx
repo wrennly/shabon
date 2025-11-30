@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '@/services/api';
 import { ShabonInput } from '@/components/SUI/ShabonInput';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -21,6 +23,7 @@ export default function ChatScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { mateId } = useLocalSearchParams<{ mateId: string }>();
+  const navigation = useNavigation();
   const [newMessage, setNewMessage] = useState('');
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
@@ -33,6 +36,14 @@ export default function ChatScreen() {
       loadChatHistory();
     }
   }, [mateId]);
+
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/chat');
+    }
+  };
 
   const loadChatHistory = async () => {
     try {
@@ -124,13 +135,19 @@ export default function ChatScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={theme.tint} />
+    <LinearGradient
+      colors={colorScheme === 'dark' ? ['#1a1a2e', '#16213e'] : ['#D0E8F2', '#D9D2E9']}
+      style={styles.container}
+    >
+      <View style={[styles.header, { borderBottomWidth: 0, height: Platform.OS === 'ios' ? 100 : 80 }]}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButtonContainer}>
+            <BlurView intensity={20} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.backButtonBlur}>
+                <Ionicons name="chevron-back" size={24} color={theme.tint} style={{ marginRight: 2 }} />
+            </BlurView>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
-        <View style={styles.rightSpacer} />
+        <View style={styles.titleContainer}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -148,7 +165,7 @@ export default function ChatScreen() {
         />
 
         {isThinking && (
-          <View style={[styles.thinkingContainer, { backgroundColor: theme.background }]}>
+          <View style={[styles.thinkingContainer]}>
             <ActivityIndicator size="small" color={theme.icon} />
             <Text style={[styles.thinkingText, { color: theme.icon }]}>
               {mateName}が考え中...
@@ -156,7 +173,7 @@ export default function ChatScreen() {
           </View>
         )}
 
-        <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+        <View style={[styles.inputContainer, { borderTopWidth: 0 }]}>
           <View style={styles.inputWrapper}>
             <ShabonInput
               placeholder="メッセージを入力..."
@@ -172,13 +189,17 @@ export default function ChatScreen() {
           <TouchableOpacity 
             onPress={handleSend} 
             disabled={!newMessage.trim() || isThinking}
-            style={[styles.sendButton, (!newMessage.trim() || isThinking) && { opacity: 0.5 }]}
+            style={[
+                styles.sendButton, 
+                (!newMessage.trim() || isThinking) && { opacity: 0.5 },
+                { backgroundColor: theme.tint }
+            ]}
           >
-            <Ionicons name="arrow-up-circle" size={32} color={theme.tint} />
+            <Ionicons name="paper-plane" size={20} color="#FFF" style={{ marginLeft: -2, marginTop: 1 }} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -195,28 +216,47 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    height: Platform.OS === 'ios' ? 44 + 48 : 56,
-    paddingTop: Platform.OS === 'ios' ? 48 : 0,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end', // Align items to bottom of header area
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    zIndex: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
-  backButton: {
-    padding: 8,
-    width: 44,
+  backButtonContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    zIndex: 101,
+  },
+  backButtonBlur: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  titleContainer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 18, // Adjust to align with back button
+      alignItems: 'center',
+      zIndex: 100,
+      pointerEvents: 'none', // Allow clicks to pass through to back button if overlapping (though they shouldn't)
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
   },
-  rightSpacer: {
-    width: 44,
-  },
   chatContainer: {
     flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 100 : 80, // Add padding to content to avoid overlap with absolute header
   },
   messageList: {
     flexGrow: 1,
@@ -237,6 +277,7 @@ const styles = StyleSheet.create({
     maxWidth: '75%',
     padding: 12,
     borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)', // Transparent bubble
   },
   messageText: {
     fontSize: 16,
@@ -247,7 +288,6 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputWrapper: {
     flex: 1,
@@ -258,8 +298,12 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
   sendButton: {
-    padding: 4,
-    marginBottom: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 0, // Align with input
   },
   thinkingContainer: {
     flexDirection: 'row',

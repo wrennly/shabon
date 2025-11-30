@@ -102,6 +102,14 @@ load_dotenv()
 
 app = FastAPI()
 
+@app.middleware("http")
+async def log_request_origin(request, call_next):
+    origin = request.headers.get("origin")
+    if origin:
+        print(f"DEBUG: Request Origin: {origin}")
+    response = await call_next(request)
+    return response
+
 # Import routers
 from routers.chat import router as chat_router, debug_router, set_model as set_chat_model
 
@@ -124,6 +132,8 @@ origins = [
     frontend_url,
     "http://localhost:3000",
     "http://localhost:8081",  # Expo default port
+    "http://192.168.10.104:8081", # Local network Expo
+    "https://.*\.exp\.direct",
     "https://dashboard.uptimerobot.com"
 ]
 app.add_middleware(
@@ -132,6 +142,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=r"https://.*\.exp\.direct",
 )
 
 @app.get("/check_env")

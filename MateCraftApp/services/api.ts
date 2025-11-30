@@ -14,7 +14,11 @@ const API_URL_PROD = Constants.expoConfig?.extra?.apiUrlProd ||
                      'https://chatcraft-api-v3.onrender.com';
 
 // Use production API on mobile (iOS/Android), development API on web
-const API_URL = Platform.OS === 'web' ? API_URL_DEV : API_URL_PROD;
+// For Web, if we are on HTTPS (e.g. Expo Tunnel), we must use HTTPS backend or localhost.
+// If the user is running backend locally on http://localhost:8000, it works fine if the frontend is http://localhost:8081
+// But if frontend is https://...exp.direct, we have Mixed Content.
+// We'll default to localhost for Web Dev to avoid IP issues, assuming the user is on the same machine.
+const API_URL = Platform.OS === 'web' ? 'http://localhost:8000' : API_URL_PROD;
 const USERNAME_KEY = '@chatcraft_username';
 
 // Log API URL for debugging

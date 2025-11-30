@@ -1,0 +1,151 @@
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js b/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js
+index d1d23ea..8655610 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js
+@@ -1,3 +1,21 @@
+ import { JsiSkApi } from "./web";
+-export const Skia = JsiSkApi(global.CanvasKit);
++
++let api = null;
++
++export const Skia = new Proxy({}, {
++  get(target, prop, receiver) {
++    if (!api) {
++      if (global.CanvasKit) {
++        api = JsiSkApi(global.CanvasKit);
++      } else {
++        // Return a dummy function or undefined, but warn
++        // console.warn("Skia accessed before CanvasKit loaded. Property:", prop);
++        // If we return undefined, it might crash if the caller expects a function.
++        // But usually this means we are accessing it too early.
++        return undefined;
++      }
++    }
++    return api[prop];
++  }
++});
+ //# sourceMappingURL=Skia.web.js.map
+\ No newline at end of file
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js
+index cb6f4e9..9c338c4 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js
+@@ -1,6 +1,6 @@
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const animatedImgFactory = Skia.AnimatedImage.MakeAnimatedImageFromEncoded.bind(Skia.AnimatedImage);
++const animatedImgFactory = (data) => Skia.AnimatedImage.MakeAnimatedImageFromEncoded(data);
+ 
+ /**
+  * Returns a Skia Animated Image object
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js
+index 49ad8ba..a341b54 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js
+@@ -1,7 +1,7 @@
+ import { Platform } from "../../Platform";
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const imgFactory = Skia.Image.MakeImageFromEncoded.bind(Skia.Image);
++const imgFactory = (data) => Skia.Image.MakeImageFromEncoded(data);
+ 
+ /**
+  * Returns a Skia Image object
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js
+index 17a6753..81a545c 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js
+@@ -1,5 +1,5 @@
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const svgFactory = Skia.SVG.MakeFromData.bind(Skia.SVG);
++const svgFactory = (data) => Skia.SVG.MakeFromData(data);
+ export const useSVG = (source, onError) => useRawData(source, svgFactory, onError);
+ //# sourceMappingURL=SVG.js.map
+\ No newline at end of file
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js
+index d9b941b..e3ab941 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js
+@@ -1,6 +1,6 @@
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const tfFactory = Skia.Typeface.MakeFreeTypeFaceFromData.bind(Skia.Typeface);
++const tfFactory = (data) => Skia.Typeface.MakeFreeTypeFaceFromData(data);
+ 
+ /**
+  * Returns a Skia Typeface object
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/web/JsiSkTypefaceFactory.js b/node_modules/@shopify/react-native-skia/lib/module/skia/web/JsiSkTypefaceFactory.js
+index 714f760..f7b38c2 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/web/JsiSkTypefaceFactory.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/web/JsiSkTypefaceFactory.js
+@@ -5,7 +5,20 @@ export class JsiSkTypefaceFactory extends Host {
+     super(CanvasKit);
+   }
+   MakeFreeTypeFaceFromData(data) {
+-    const tf = this.CanvasKit.Typeface.MakeFreeTypeFaceFromData(JsiSkTypeface.fromValue(data));
++    if (!this.CanvasKit.Typeface) {
++      console.error("CanvasKit.Typeface is undefined. CanvasKit:", this.CanvasKit);
++      return null;
++    }
++    let tf = null;
++    if (this.CanvasKit.Typeface.MakeFreeTypeFaceFromData) {
++      tf = this.CanvasKit.Typeface.MakeFreeTypeFaceFromData(JsiSkTypeface.fromValue(data));
++    } else if (this.CanvasKit.Typeface.MakeTypefaceFromData) {
++      tf = this.CanvasKit.Typeface.MakeTypefaceFromData(JsiSkTypeface.fromValue(data));
++    } else {
++      console.error("CanvasKit.Typeface.MakeFreeTypeFaceFromData and MakeTypefaceFromData are undefined");
++      return null;
++    }
++
+     if (tf === null) {
+       return null;
+     }
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/views/SkiaPictureView.web.js b/node_modules/@shopify/react-native-skia/lib/module/views/SkiaPictureView.web.js
+index 041853d..b43e42f 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/views/SkiaPictureView.web.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/views/SkiaPictureView.web.js
+@@ -31,7 +31,19 @@ class WebGLRenderer {
+     } = this;
+     canvas.width = canvas.clientWidth * pd;
+     canvas.height = canvas.clientHeight * pd;
+-    const surface = CanvasKit.MakeWebGLCanvasSurface(canvas);
++
++    if (canvas.width === 0 || canvas.height === 0) {
++      return;
++    }
++
++    let surface = null;
++    try {
++      surface = CanvasKit.MakeWebGLCanvasSurface(canvas);
++    } catch (e) {
++      console.warn("Failed to create WebGL surface:", e);
++      return;
++    }
++
+     const ctx = canvas.getContext("webgl2");
+     if (ctx) {
+       ctx.drawingBufferColorSpace = "display-p3";
+@@ -71,6 +83,9 @@ class StaticWebGLRenderer {
+     this.cachedImage = null;
+   }
+   renderPictureToSurface(picture) {
++    if (this.canvas.clientWidth === 0 || this.canvas.clientHeight === 0) {
++      return null;
++    }
+     const tempCanvas = new OffscreenCanvas(this.canvas.clientWidth * this.pd, this.canvas.clientHeight * this.pd);
+     let surface = null;
+     try {
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/web/LoadSkiaWeb.js b/node_modules/@shopify/react-native-skia/lib/module/web/LoadSkiaWeb.js
+index 76374a3..1e3006f 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/web/LoadSkiaWeb.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/web/LoadSkiaWeb.js
+@@ -9,6 +9,8 @@ export const LoadSkiaWeb = async opts => {
+   }
+   ckSharedPromise = (_ckSharedPromise = ckSharedPromise) !== null && _ckSharedPromise !== void 0 ? _ckSharedPromise : CanvasKitInit(opts);
+   const CanvasKit = await ckSharedPromise;
++  console.log("CanvasKit loaded via LoadSkiaWeb:", CanvasKit);
++  console.log("CanvasKit.Typeface:", CanvasKit.Typeface);
+   // The CanvasKit API is stored on the global object and used
+   // to create the JsiSKApi in the Skia.web.ts file.
+   global.CanvasKit = CanvasKit;

@@ -1,7 +1,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
-import { ShabonCard } from './ShabonCard';
+import { StyleSheet, Text, TouchableOpacity, ViewStyle, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 interface ShabonCheckboxProps {
     checked: boolean;
@@ -27,20 +27,19 @@ export const ShabonCheckbox: React.FC<ShabonCheckboxProps> = ({
             onPress={() => onChange(!checked)}
             activeOpacity={0.7}
         >
-            <ShabonCard 
-                width={size} 
-                height={size} 
+            <BlurView
+                intensity={Platform.OS === 'ios' ? 20 : 10}
+                tint={isDark ? 'dark' : 'light'}
                 style={{ 
+                    width: size, 
+                    height: size, 
                     borderRadius: size/2, 
                     alignItems: 'center', 
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'
+                    borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)',
+                    overflow: 'hidden'
                 }}
-                contentStyle={{ padding: 0 }} // Remove padding for small checkbox
-                rainbowStrength={0.0}
-                fillAlpha={0.0}
-                interactive={false}
             >
                 {checked && (
                     <Text style={{ 
@@ -51,7 +50,7 @@ export const ShabonCheckbox: React.FC<ShabonCheckboxProps> = ({
                         ✓
                     </Text>
                 )}
-            </ShabonCard>
+            </BlurView>
             {label && (
                 <Text style={[
                     styles.label, 

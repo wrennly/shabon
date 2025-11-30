@@ -1,7 +1,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View, ViewStyle, DimensionValue } from 'react-native';
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View, ViewStyle, DimensionValue, Platform } from 'react-native';
 import { ShabonCard } from './ShabonCard';
 import { Colors } from '@/constants/theme';
 
@@ -45,21 +45,20 @@ export const ShabonSelect: React.FC<ShabonSelectProps> = ({
                 <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
             )}
             <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
-                <ShabonCard 
-                    width="100%" 
-                    height={height} 
+                <View
                     style={StyleSheet.flatten([
                         styles.trigger, 
                         { 
+                            width: '100%',
+                            height: height,
                             borderRadius: height / 2,
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F2F4F8'
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.05)',
+                            overflow: 'hidden',
                         },
                         style
                     ])}
-                    contentStyle={{ padding: 0 }} // Remove default padding
-                    rainbowStrength={0.0} // No rainbow for select trigger
-                    fillAlpha={0.0} // Transparent center (using backgroundColor instead)
-                    interactive={false}
                 >
                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20 }}>
                         <Text style={[styles.text, { color: selectedOption ? (isDark ? '#FFF' : '#333') : '#8E8E93' }]}>
@@ -67,7 +66,7 @@ export const ShabonSelect: React.FC<ShabonSelectProps> = ({
                         </Text>
                         <Text style={[styles.icon, { color: isDark ? '#AAA' : '#666' }]}>▼</Text>
                     </View>
-                </ShabonCard>
+                </View>
             </TouchableOpacity>
 
             <Modal
@@ -89,7 +88,9 @@ export const ShabonSelect: React.FC<ShabonSelectProps> = ({
                             height={Math.min(options.length * 50 + 20, 400)} 
                             style={{ 
                                 borderRadius: 20,
-                                backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7'
+                                backgroundColor: isDark ? 'rgba(28,28,30,0.8)' : 'rgba(255,255,255,0.8)',
+                                borderWidth: 1,
+                                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
                             }}
                             contentStyle={{ padding: 0 }}
                             rainbowStrength={0.0} // No rainbow for dropdown list

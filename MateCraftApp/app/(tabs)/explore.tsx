@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
-import { apiClient } from '@/services/api';
+import { apiClient, authService } from '@/services/api';
 import { AppHeader } from '@/components/app-header';
 import { ShabonListItem } from '@/components/SUI/ShabonListItem';
 import { ShabonInput } from '@/components/SUI/ShabonInput';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+
+import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
+import { useIsFocused } from '@react-navigation/native';
 
 interface Mate {
   id: number;
@@ -19,6 +22,7 @@ interface Mate {
 }
 
 export default function ExploreScreen() {
+  const isFocused = useIsFocused();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const [publicMates, setPublicMates] = useState<any[]>([]);
@@ -27,15 +31,29 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    if (isFocused) {
+      checkAuthAndLoad();
+    }
+  }, [isFocused]);
+
+  const checkAuthAndLoad = async () => {
+    const isLoggedIn = await authService.isLoggedIn();
+    if (!isLoggedIn) {
+      router.replace('/login');
+      return;
+    }
     loadPublicMates();
-  }, []);
+  };
 
   const loadPublicMates = async () => {
     try {
       const response = await apiClient.get('/mates/public');
       setPublicMates(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load public mates:', error);
+      if (error.response?.status === 401) {
+        router.replace('/login');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,35 +84,49 @@ export default function ExploreScreen() {
     />
   );
 
-  if (loading) {
-    return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.tint} />
-        <Text style={[styles.loadingText, { color: theme.text }]}>読み込み中...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppHeader title="検索">
-        <ShabonInput
-          placeholder="メイトを検索"
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchBar}
-          leftIcon={<Ionicons name="search" size={20} color="#8E8E93" />}
-          height={40}
-          containerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}
-        />
-      </AppHeader>
-
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      <FloatingSettingsButton />
+      {loading ? (
+        <View style={{ flex: 1 }}>
+            <View style={{ paddingVertical: 8 }}>
+                <AppHeader title="検索">
+                    <ShabonInput
+                    placeholder="メイトを検索"
+                    onChangeText={setSearchQuery}
+                    value={searchQuery}
+                    style={styles.searchBar}
+                    leftIcon={<Ionicons name="search" size={20} color="#8E8E93" />}
+                    height={40}
+                    containerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}
+                    />
+                </AppHeader>
+            </View>
+            <View style={[styles.centerContainer, { backgroundColor: 'transparent' }]}>
+                <ActivityIndicator size="large" color={theme.tint} />
+                <Text style={[styles.loadingText, { color: theme.text }]}>読み込み中...</Text>
+            </View>
+        </View>
+      ) : (
       <FlatList
         data={filteredMates}
         renderItem={renderMateItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        ListHeaderComponent={
+          <AppHeader title="検索">
+            <ShabonInput
+              placeholder="メイトを検索"
+              onChangeText={setSearchQuery}
+              value={searchQuery}
+              style={styles.searchBar}
+              leftIcon={<Ionicons name="search" size={20} color="#8E8E93" />}
+              height={40}
+              containerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}
+            />
+          </AppHeader>
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: theme.icon }]}>
@@ -103,6 +135,7 @@ export default function ExploreScreen() {
           </View>
         }
       />
+      )}
     </View>
   );
 }

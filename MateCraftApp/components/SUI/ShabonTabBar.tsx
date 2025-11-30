@@ -18,7 +18,7 @@ import Animated, {
     withSpring
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SHABON_SHADER_SKSL } from './ShabonShader';
+import { getShabonShader } from './ShabonShader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_BAR_WIDTH = SCREEN_WIDTH - 40; 
@@ -88,6 +88,9 @@ export const ShabonTabBar: React.FC<ShabonTabBarProps> = ({
   const isDark = colorScheme === 'dark';
 
   const uniforms = useDerivedValue(() => {
+    if (Platform.OS === 'web') {
+      return {};
+    }
     return {
       iTime: time.value / 1000,
       iResolution: vec(TAB_BAR_WIDTH, TAB_BAR_HEIGHT),
@@ -120,17 +123,19 @@ export const ShabonTabBar: React.FC<ShabonTabBarProps> = ({
             />
 
             {/* Rainbow Shader Overlay */}
-            <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-                <RoundedRect
-                    x={0}
-                    y={0}
-                    width={TAB_BAR_WIDTH}
-                    height={TAB_BAR_HEIGHT}
-                    r={35}
-                >
-                    <Shader source={SHABON_SHADER_SKSL} uniforms={uniforms} />
-                </RoundedRect>
-            </Canvas>
+            {Platform.OS !== 'web' && (
+                <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+                    <RoundedRect
+                        x={0}
+                        y={0}
+                        width={TAB_BAR_WIDTH}
+                        height={TAB_BAR_HEIGHT}
+                        r={35}
+                    >
+                        {getShabonShader() && <Shader source={getShabonShader()!} uniforms={uniforms as any} />}
+                    </RoundedRect>
+                </Canvas>
+            )}
 
             <View style={styles.tabsContainer}>
             {tabs.map((tab) => (
