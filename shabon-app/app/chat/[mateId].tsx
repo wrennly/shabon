@@ -73,14 +73,18 @@ export default function ChatScreen() {
     if (!newMessage.trim() || isThinking) return;
 
     const userMessage: ChatMessage = { role: 'user', text: newMessage };
-    setHistory((prev) => [...prev, userMessage]);
+    // 直前のユーザーメッセージも含めた履歴をバックエンドに渡すため、
+    // ここで updatedHistory を作ってから API に送る
+    const updatedHistory: ChatMessage[] = [...history, userMessage];
+    setHistory(updatedHistory);
     setNewMessage('');
     setIsThinking(true);
 
     try {
       const response = await apiClient.post('/chat/', {
-        mate_id: mateId,
+        mate_id: Number(mateId),
         new_message: newMessage,
+        history: updatedHistory,
       });
 
       const modelMessage: ChatMessage = {
