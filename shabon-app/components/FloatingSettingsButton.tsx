@@ -16,7 +16,11 @@ export function FloatingSettingsButton() {
 
   const handleLogout = async () => {
     analytics.logEvent(AnalyticsEvents.LOGOUT);
-    await authService.signOut();
+    try {
+      await authService.signOut();
+    } catch (error) {
+      console.error('Logout error (ignored):', error);
+    }
     router.replace('/login');
   };
 

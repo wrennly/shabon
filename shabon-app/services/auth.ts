@@ -77,8 +77,32 @@ export const authService = {
    * Sign out
    */
   signOut: async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // セッションが既に無い場合などは AuthSessionMissingError になることがある
+        const message = (error as any)?.message || '';
+        const name = (error as any)?.name || '';
+        if (name === 'AuthSessionMissingError' || message.includes('Auth session missing')) {
+          if (__DEV__) {
+            console.warn('[Auth] signOut called with no active session - ignoring');
+          }
+          return;
+        }
+        throw error;
+      }
+    } catch (err: any) {
+      const message = err?.message || '';
+      const name = err?.name || '';
+      if (name === 'AuthSessionMissingError' || message.includes('Auth session missing')) {
+        if (__DEV__) {
+          console.warn('[Auth] signOut threw AuthSessionMissingError - ignoring');
+        }
+        return;
+      }
+      console.error('Sign-out error:', err);
+      throw err;
+    }
   },
 
   /**

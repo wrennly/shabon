@@ -87,7 +87,7 @@ export default function MatesScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FloatingSettingsButton />
       {loading && !refreshing ? (
         <View style={{ flex: 1 }}>

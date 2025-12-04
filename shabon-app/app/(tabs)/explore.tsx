@@ -85,7 +85,7 @@ export default function ExploreScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FloatingSettingsButton />
       {loading ? (
         <View style={{ flex: 1 }}>

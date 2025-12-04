@@ -229,7 +229,7 @@ export default function MateBuilderScreen() {
   const advancedSettings = schema.filter((attr) => attr.display_order >= 5);
 
   return (
-    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FloatingSettingsButton />
       {loading ? (
         <View style={{ flex: 1 }}>
