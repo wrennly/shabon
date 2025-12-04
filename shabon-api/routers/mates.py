@@ -29,7 +29,7 @@ router = APIRouter(prefix="/mates", tags=["mates"])
 get_current_user = None
 
 def current_user_dependency(
-    authorization: str | None = Header(None),
+    authorization: Optional[str] = Header(None),
     session: Session = Depends(get_session)
 ):
     """Dependency wrapper that calls the injected get_current_user function"""

@@ -16,7 +16,7 @@ export function FloatingSettingsButton() {
 
   const handleLogout = async () => {
     analytics.logEvent(AnalyticsEvents.LOGOUT);
-    await authService.logout();
+    await authService.signOut();
     router.replace('/login');
   };
 

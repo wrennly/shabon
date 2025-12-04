@@ -3,17 +3,15 @@ Authentication and User Profile endpoints
 """
 import os
 import time
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlmodel import Session, select
-from google.oauth2 import id_token
-from google.auth.transport import requests as auth_requests
+# Google auth libraries are no longer needed here as auth is handled by Supabase
 
 from database import get_session
 from models import (
     Users, AiMates,
-    AuthRequest, UserResponse, UserProfileUpdateRequest,
-    GoogleLoginRequest
+    UserResponse, UserProfileUpdateRequest
 )
 
 # Router setup
@@ -23,7 +21,7 @@ router = APIRouter(tags=["auth"])
 get_current_user = None
 
 def current_user_dependency(
-    authorization: str | None = Header(None),
+    authorization: Optional[str] = Header(None),
     session: Session = Depends(get_session)
 ):
     """Dependency wrapper that calls the injected get_current_user function"""
@@ -31,143 +29,6 @@ def current_user_dependency(
         raise HTTPException(status_code=500, detail="get_current_user not initialized")
     import asyncio
     return asyncio.run(get_current_user(authorization, session))
-
-@router.post("/register", response_model=UserResponse)
-def register_user(
-    request_data: AuthRequest, 
-    session: Session = Depends(get_session)
-):
-    """Register a new user"""
-    # Check if username already exists
-    existing_user = session.exec(
-        select(Users).where(Users.username == request_data.username)
-    ).first()
-    
-    if existing_user:
-        raise HTTPException(status_code=400, detail="そのユーザー名はすでに使用されています")
-
-    # Create new user
-    new_user = Users(
-        username=request_data.username,
-        profile=f"わたしは {request_data.username} です。"
-    )
-    session.add(new_user)
-    session.commit()
-    session.refresh(new_user)
-    
-    return new_user
-
-@router.post("/login", response_model=UserResponse)
-def login_user(
-    request_data: AuthRequest,
-    session: Session = Depends(get_session)
-):
-    """User login (no password required)"""
-    # Check if username is registered
-    user = session.exec(
-        select(Users).where(Users.username == request_data.username)
-    ).first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="そのユーザー名は見つかりません")
-    
-    # Deleted users cannot login
-    if user.is_deleted:
-        raise HTTPException(status_code=403, detail="このアカウントは削除されています")
-
-    return user
-
-@router.post("/login/google")
-def login_google(
-    request_data: GoogleLoginRequest,
-    session: Session = Depends(get_session)
-):
-    """Google OAuth login"""
-    try:
-        # Get Google Client ID from environment variable
-        google_client_id = os.getenv("GOOGLE_CLIENT_ID")
-        if not google_client_id:
-            raise HTTPException(
-                status_code=500, 
-                detail="Google Client ID が設定されていません"
-            )
-        
-        # Verify Google ID Token
-        idinfo = id_token.verify_oauth2_token(
-            request_data.id_token, 
-            auth_requests.Request(), 
-            google_client_id
-        )
-        
-        # Extract required information from token
-        google_id = idinfo.get("sub")  # Google's unique identifier
-        email = idinfo.get("email")
-        name = idinfo.get("name")
-        
-        if not email or not google_id:
-            raise HTTPException(
-                status_code=400, 
-                detail="Google Token から email 取得できません"
-            )
-        
-        # Use email as user ID
-        user_id = email
-        
-        # Check for existing user (search by email)
-        existing_user = session.exec(
-            select(Users).where(Users.username == user_id)
-        ).first()
-        
-        if existing_user:
-            # If deleted user, reset is_deleted flag
-            if existing_user.is_deleted:
-                existing_user.is_deleted = False
-                session.add(existing_user)
-                session.commit()
-                session.refresh(existing_user)
-                # Treat deleted user recovery as first-time user
-                return {
-                    "id": existing_user.id,
-                    "username": existing_user.username,
-                    "display_name": existing_user.display_name,
-                    "profile": existing_user.profile,
-                    "is_new_user": True
-                }
-            
-            # Return regular existing user
-            return {
-                "id": existing_user.id,
-                "username": existing_user.username,
-                "display_name": existing_user.display_name,
-                "profile": existing_user.profile,
-                "is_new_user": False
-            }
-        
-        # Create new user
-        is_new_user = True
-        new_user = Users(
-            username=user_id,  # Use email as username
-            display_name=name or email.split("@")[0],  # Use Google name as display name
-            profile=f"Googleアカウントでログインしました"
-        )
-        session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-        
-        return {
-            "id": new_user.id,
-            "username": new_user.username,
-            "display_name": new_user.display_name,
-            "profile": new_user.profile,
-            "is_new_user": True
-        }
-        
-    except ValueError as e:
-        # Token verification error
-        raise HTTPException(
-            status_code=401, 
-            detail=f"Google Token 検証に失敗しました: {str(e)}"
-        )
 
 # User profile router
 user_router = APIRouter(prefix="/users", tags=["users"])
@@ -245,3 +106,4 @@ def delete_user_account(
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"退会処理エラー: {str(e)}")
+

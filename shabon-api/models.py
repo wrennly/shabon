@@ -38,7 +38,8 @@ class MAttributes(AttributeBase, table=True):
 # users - User accounts
 # ---
 class UserBase(SQLModel):
-    username: str = Field(unique=True, index=True)  # Unique user identifier
+    username: Optional[str] = Field(default=None, unique=True, index=True)  # Unique user identifier (Legacy or Display ID)
+    supabase_uid: str = Field(unique=True, index=True)  # Supabase Auth User ID (UUID)
     display_name: Optional[str] = None  # Display name (editable)
     profile: Optional[str] = None
 
@@ -195,14 +196,6 @@ class MateEditDetailResponse(SQLModel):
     base_prompt: Optional[str] = None  # User's raw prompt
     is_public: bool
     settings: List[SettingInput]
-
-class AuthRequest(SQLModel):
-    username: str = Field(index=True)
-
-class GoogleLoginRequest(SQLModel):
-    """Request for Google OAuth login"""
-    id_token: str
-
 class UserProfileUpdateRequest(SQLModel):
     """Request to update user profile"""
     display_name: Optional[str] = None

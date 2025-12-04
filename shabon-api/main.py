@@ -24,6 +24,7 @@ from google.oauth2 import id_token
 from functools import lru_cache
 import redis
 from redis import Redis
+import jwt
 
 from models import (
     MAttributes, MAttributeOptions, 
@@ -31,7 +32,7 @@ from models import (
     Users, AiMates, MateSettings, MAttributes, MAttributeOptions,
     MateCreateRequest, ChatRequest, ChatResponse, ChatMessage,
     SettingInput, MateInfoResponse, MateEditDetailResponse, ChatHistory, ChatHistoryResponse,
-    AuthRequest, UserResponse, BatchMateRequest, BatchMateDetailsResponse,
+    UserResponse, BatchMateRequest, BatchMateDetailsResponse,
     BatchMateResponseWrapper, ConversationMemory, ChatSearchResult, ChatSearchResponse
 )
 from settings import (
@@ -88,17 +89,13 @@ class UserProfileUpdateRequest(SQLModel):
     display_name: Optional[str] = None  # Display name (editable)
     profile: Optional[str] = None
 
-class GoogleLoginRequest(BaseModel):
-    id_token: str  # ID Token from Google
-
-class GoogleLoginResponse(BaseModel):
-    username: str
-    user_id: int
-    message: str
-    is_new_user: bool  # Whether this is a first-time user
-
 # Load environment variables from .env file
 load_dotenv()
+
+# Supabase JWT secret for verifying access tokens
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+if not SUPABASE_JWT_SECRET:
+    raise ValueError("SUPABASE_JWT_SECRET が設定されていません")
 
 app = FastAPI()
 
@@ -128,21 +125,31 @@ if sentry_dsn:
 
 # CORS configuration
 frontend_url = os.environ.get("FRONTEND_URL", "")
-origins = [
-    frontend_url,
-    "http://localhost:3000",
-    "http://localhost:8081",  # Expo default port
-    "http://192.168.10.104:8081", # Local network Expo
-    "https://.*\.exp\.direct",
-    "https://dashboard.uptimerobot.com"
-]
+environment = os.environ.get("ENVIRONMENT", "development")
+
+if environment == "development":
+    # ローカル開発では Origin を問わず許可（フロントのポートやドメイン変更に強くする）
+    origins = []
+    origin_regex = r".*"
+else:
+    # 本番などでは従来どおり、特定のオリジンのみ許可
+    origins = [
+        frontend_url,
+        "http://localhost:3000",
+        "http://localhost:8081",  # Expo default port
+        "http://192.168.10.104:8081", # Local network Expo
+        "https://.*\.exp\.direct",
+        "https://dashboard.uptimerobot.com"
+    ]
+    origin_regex = r"https://.*\.exp\.direct"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_origin_regex=r"https://.*\.exp\.direct",
+    allow_origin_regex=origin_regex,
 )
 
 @app.get("/check_env")
@@ -167,46 +174,86 @@ def generate_mate_id(session: Session) -> str:
         if not existing:
             return mate_id
 
-# Authentication: Get user from Authorization header
+# Authentication: Get user from Authorization header (Supabase JWT)
 async def get_current_user(
-    authorization: Annotated[str | None, Header()] = None,
+    authorization: Optional[str] = Header(None),
     session: Session = Depends(get_session)
 ) -> Users:
-    """Verify authenticated user from request header"""
-    
+    """Verify authenticated user from Supabase JWT in Authorization header"""
+
+    # Debug: log raw Authorization header value
+    print(f"DEBUG: Authorization header value: {authorization}")
+
     if authorization is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="認証情報がありません",
         )
-    
-    # Parse Authorization: "Bearer username" format
+
+    # Parse Authorization: "Bearer <jwt>" format
     try:
-        scheme, username = authorization.split()
+        scheme, token = authorization.split()
         if scheme.lower() != "bearer":
             raise ValueError()
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization形式が正しくありません (Bearer [username])",
+            detail="Authorization形式が正しくありません (Bearer <token>)",
         )
 
-    # Search for user in database
-    user = session.exec(select(Users).where(Users.username == username)).first()
-    
-    if not user:
+    # Decode Supabase JWT
+    try:
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated",
+        )
+        print("DEBUG: Decoded JWT payload:", payload)
+    except jwt.ExpiredSignatureError as e:
+        print("DEBUG: JWT expired:", str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="そのユーザー名は登録されてないよ",
+            detail="アクセストークンの有効期限が切れています",
         )
-    
+    except jwt.InvalidTokenError as e:
+        print("DEBUG: JWT invalid:", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="アクセストークンが無効です",
+        )
+
+    supabase_uid = payload.get("sub")
+    if not supabase_uid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="トークンにユーザーIDが含まれていません",
+        )
+
+    email = payload.get("email")
+    user_metadata = payload.get("user_metadata") or {}
+    display_name = user_metadata.get("full_name") or email
+
+    # Find or create local user linked to Supabase UID
+    user = session.exec(select(Users).where(Users.supabase_uid == supabase_uid)).first()
+
+    if not user:
+        user = Users(
+            supabase_uid=supabase_uid,
+            username=email or supabase_uid,
+            display_name=display_name,
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
     # Deny access for deleted users
     if user.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="このアカウントは削除されています",
         )
-    
+
     return user
 
 @app.get(

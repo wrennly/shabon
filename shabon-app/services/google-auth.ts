@@ -10,7 +10,7 @@ const GOOGLE_CLIENT_ID = Constants.expoConfig?.extra?.googleClientId || process.
 
 // Expo Auth Sessionのリダイレクトスキーム
 const redirectUri = AuthSession.makeRedirectUri({
-  scheme: 'matecraft',
+  scheme: 'shabon',
   path: 'auth',
 });
 

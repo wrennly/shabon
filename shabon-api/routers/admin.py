@@ -3,6 +3,7 @@ Admin endpoints for cache and memory management
 """
 import os
 from datetime import datetime
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlmodel import Session, select, func
 
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 get_current_user = None
 
 def current_user_dependency(
-    authorization: str | None = Header(None),
+    authorization: Optional[str] = Header(None),
     session: Session = Depends(get_session)
 ):
     """Dependency wrapper that calls the injected get_current_user function"""

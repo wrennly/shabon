@@ -1,5 +1,5 @@
 # settings.py
-# ChatCraft API Configuration
+# Shabon API Configuration
 
 """
 RAG (Retrieval Augmented Generation) 設定

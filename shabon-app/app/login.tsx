@@ -1,275 +1,187 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Image, Text } from 'react-native';
-import { apiClient, authService } from '@/services/api';
+import React, { useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
+import { Text } from 'react-native';
 import { router } from 'expo-router';
-import { analytics, AnalyticsEvents } from '@/services/analytics';
-import { useGoogleAuth, exchangeCodeForToken, promptGoogleLoginWeb } from '@/services/google-auth';
-import * as AuthSession from 'expo-auth-session';
-import { ShabonButton, ShabonInput, ShabonCard } from '@/components/SUI';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { makeRedirectUri } from 'expo-auth-session';
+import { Ionicons } from '@expo/vector-icons';
+
+import { ShabonButton } from '@/components/SUI/ShabonButton';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { authService } from '@/services/auth';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const redirectUri = makeRedirectUri({
+  scheme: 'shabon',
+  path: 'auth'
+});
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const theme = Colors[colorScheme ?? 'light'];
-  
-  const [username, setUsername] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  
-  const { request, response, promptAsync } = useGoogleAuth();
+  const [loading, setLoading] = useState(false);
+  const [testLoginLoading, setTestLoginLoading] = useState(false);
 
-  useEffect(() => {
-    analytics.logScreenView('Login');
-  }, []);
-
-  // Handle Google OAuth response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { code } = response.params;
-      
-      if (code) {
-        handleGoogleCode(code);
-      }
-    } else if (response?.type === 'error') {
-      setError('Google認証に失敗しました');
-    }
-  }, [response]);
-
-  const handleLogin = async () => {
-    if (!username.trim()) {
-      setError('ユーザー名を入力してください');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      // Simple login (ID only)
-      const response = await apiClient.post('/login', { username });
-      
-      if (response.data) {
-        await authService.login(username);
-        analytics.logEvent(AnalyticsEvents.LOGIN, { method: 'username' });
-        analytics.setUserId(username);
-        // Navigate to home/mate list
-        router.replace('/');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'ログインに失敗しました');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!username.trim()) {
-      setError('ユーザー名を入力してください');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await apiClient.post('/register', { username });
-      
-      if (response.data) {
-        await authService.login(username);
-        router.replace('/');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'アカウント作成に失敗しました');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleCode = async (code: string) => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const tokenResult = await exchangeCodeForToken(code);
-      
-      if (tokenResult.idToken) {
-        const response = await authService.loginWithGoogle(tokenResult.idToken);
-        analytics.logEvent(AnalyticsEvents.LOGIN, { method: 'google' });
-        analytics.setUserId(response.username);
-        router.replace('/');
-      } else {
-        setError(tokenResult.error || 'トークン取得に失敗しました');
-      }
-    } catch (err: any) {
-      console.error('Google login error:', err);
-      setError(err.response?.data?.detail || 'Googleログインに失敗しました');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    redirectUri,
+    scopes: ['openid', 'profile', 'email'],
+  });
 
   const handleGoogleLogin = async () => {
-    setError('');
-    
     try {
-      if (Platform.OS === 'web') {
-        // Web版: WebBrowserを使用
-        setIsLoading(true);
-        const result = await promptGoogleLoginWeb();
-        
-        if (result.idToken) {
-          const response = await authService.loginWithGoogle(result.idToken);
-          analytics.logEvent(AnalyticsEvents.LOGIN, { method: 'google' });
-          analytics.setUserId(response.username);
-          router.replace('/');
-        } else {
-          setError(result.error || 'Googleログインに失敗しました');
-        }
-        setIsLoading(false);
+      setLoading(true);
+      const result = await promptAsync();
+
+      if (result?.type === 'success' && result.authentication?.idToken) {
+        await authService.signInWithGoogle(result.authentication.idToken);
+        router.replace('/(tabs)/chat');
       } else {
-        // モバイル版: AuthSessionを使用
-        if (request) {
-          await promptAsync();
-        }
+        setLoading(false);
       }
-    } catch (err: any) {
-      console.error('Google login error:', err);
-      setError('Googleログインに失敗しました');
-      setIsLoading(false);
+    } catch (error: any) {
+      setLoading(false);
+      Alert.alert('Googleログインに失敗しました', error.message);
+    }
+  };
+
+  const handleTestLogin = async () => {
+    const email = process.env.EXPO_PUBLIC_TEST_USER_EMAIL;
+    const password = process.env.EXPO_PUBLIC_TEST_USER_PASSWORD;
+
+    if (!email || !password) {
+      Alert.alert('テストユーザー情報が不足しています', 'EXPO_PUBLIC_TEST_USER_EMAIL / PASSWORD を設定してください');
+      return;
+    }
+
+    try {
+      setTestLoginLoading(true);
+      await authService.signInWithPassword(email, password);
+      router.replace('/(tabs)/chat');
+    } catch (error: any) {
+      Alert.alert('テストログインに失敗しました', error.message || 'Unknown error');
+    } finally {
+      setTestLoginLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    if (Platform.OS !== 'ios') {
+      Alert.alert('Apple Sign-In は iOS でのみ利用できます');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('Apple認証に失敗しました');
+      }
+
+      await authService.signInWithApple(credential.identityToken, credential.authorizationCode ?? '');
+      router.replace('/(tabs)/chat');
+    } catch (error: any) {
+      if (error.code !== 'ERR_CANCELED') {
+        Alert.alert('Appleログインに失敗しました', error.message);
+      }
+      setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('@/assets/images/logo.png')} 
-            style={styles.logo}
-            resizeMode="contain"
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      <View style={styles.innerContainer}>
+        <Text style={[styles.title, { color: theme.text }]}>Shabonへようこそ</Text>
+        <Text style={[styles.subtitle, { color: theme.icon }]}>Google または Apple でログイン</Text>
+
+        <ShabonButton
+          title="Googleで続行"
+          onPress={handleGoogleLogin}
+          disabled={!request || loading}
+          loading={loading}
+          variant="primary"
+          width={260}
+          height={52}
+          borderRadius={26}
+          icon={<Ionicons name="logo-google" size={20} color={theme.text} />}
+        />
+
+        {Platform.OS === 'ios' && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={
+              colorScheme === 'dark'
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={26}
+            style={{ width: 260, height: 52, marginTop: 16 }}
+            onPress={handleAppleLogin}
           />
-          <Text style={[styles.title, { color: theme.text }]}>
-            MateCraft
-          </Text>
-        </View>
-        <Text style={[styles.subtitle, { color: theme.text }]}>
-          AIキャラクターとチャット
-        </Text>
+        )}
 
-        <ShabonCard style={styles.card}>
-            <ShabonButton
-              title="Googleでログイン"
-              onPress={handleGoogleLogin}
-              variant="secondary"
-              style={styles.googleButton}
-              // icon="google" // アイコンは別途対応が必要だが一旦テキストのみ
-            />
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={theme.tint} />
+          </View>
+        )}
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={[styles.dividerText, { color: theme.text }]}>または</Text>
-              <View style={styles.divider} />
-            </View>
-
-            <ShabonInput
-              label="ユーザー名"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              // disabled={isLoading} // ShabonInput does not have disabled prop in interface but TextInputProps has editable
-              editable={!isLoading}
-              style={styles.input}
-            />
-            {error ? (
-              <Text style={styles.errorText}>
-                {error}
-              </Text>
-            ) : null}
-
-            <ShabonButton
-              title="ログイン"
-              onPress={handleLogin}
-              style={styles.button}
-            />
-
-            <ShabonButton
-              title="新規登録"
-              onPress={handleRegister}
-              variant="outline"
-              style={styles.button}
-            />
-        </ShabonCard>
+        <ShabonButton
+          title="テストユーザーでログイン"
+          onPress={handleTestLogin}
+          disabled={testLoginLoading}
+          loading={testLoginLoading}
+          variant="secondary"
+          width={260}
+          height={48}
+          borderRadius={24}
+          style={{ marginTop: 32 }}
+          textStyle={{ color: theme.text }}
+        />
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
-    padding: 20,
-  },
-  logoContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
   },
-  logo: {
-    width: 48,
-    height: 48,
-    marginRight: 12,
+  innerContainer: {
+    width: '100%',
+    paddingHorizontal: 24,
+    alignItems: 'center',
   },
   title: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 32, // headlineLarge equivalent
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   subtitle: {
-    textAlign: 'center',
+    fontSize: 16,
     marginBottom: 32,
-    opacity: 0.7,
-    fontSize: 16, // bodyLarge equivalent
   },
-  card: {
-    padding: 24,
-  },
-  googleButton: {
-    marginBottom: 24,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E5EA', // iOS separator color
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    opacity: 0.6,
-    fontSize: 12,
-  },
-  input: {
-    marginBottom: 16,
-  },
-  button: {
-    marginTop: 12,
-  },
-  errorText: {
-    color: '#FF3B30', // iOS Red
-    marginBottom: 12,
-    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
 });
