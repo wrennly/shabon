@@ -60,4 +60,3 @@ alembic/versions/__pycache__/
 
 # Workspaces
 *.code-workspace
-start-local.sh
