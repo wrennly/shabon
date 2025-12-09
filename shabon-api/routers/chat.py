@@ -32,6 +32,7 @@ from utils.cache import clear_query_cache
 from settings import (
     RAG_HISTORY_LIMIT,
     RAG_SUMMARY_INTERVAL,
+    RAG_SUMMARY_OFFSET,
     RAG_RETRIEVAL_LIMIT,
     RAG_MEMORY_CONTEXT_LIMIT
 )
@@ -250,53 +251,68 @@ def chat_with_ai(
         print(f"✅ Chat history committed successfully")
         
         # ---
-        # 💡 RAG: 要約のみベクトル化して記憶に保存（コスト削減）
+        # 💡 RAG: 11-20往復目を要約してベクトル化（コスト削減 + 高品質）
         # NOTE: These can fail without affecting chat history
         # ---
         print(f"🔄 Starting RAG memory save...")
         try:
             # 会話数がRAG_SUMMARY_INTERVALの倍数になったら要約を生成してベクトル化
+            # 例: 10往復目、20往復目、30往復目...
             current_turn_count = len(request_data.history) + 1  # 新しいメッセージ分を追加
             
-            if current_turn_count % RAG_SUMMARY_INTERVAL == 0:
+            if current_turn_count % RAG_SUMMARY_INTERVAL == 0 and current_turn_count >= RAG_SUMMARY_INTERVAL:
                 print(f"  📊 Turn count: {current_turn_count} - Generating summary...")
                 
-                # 最新のRAG_SUMMARY_INTERVAL往復分(=INTERVAL*2メッセージ)の会話を取得
-                # 例: INTERVAL=5 → 10メッセージ(5往復)を要約
-                messages_to_summarize = RAG_SUMMARY_INTERVAL * 2
+                # 要約対象: 11-20往復目の内容（最新10往復はAPIに直接送るので除外）
+                # 履歴の構造: [古い...新しい]
+                # current_turn_count = 20 の場合:
+                #   - request_data.history には 1-19 往復目がある
+                #   - 最新10往復 (10-19) はAPIに送信済み
+                #   - 要約対象は 0-9 (= 1-10往復目、インデックスで言うと history[0:20])
                 
-                # request_data.historyから最新分を取得
-                if len(request_data.history) >= messages_to_summarize:
-                    recent_messages = request_data.history[-messages_to_summarize:]
-                else:
-                    # 履歴が足りない場合は全部使う
-                    recent_messages = request_data.history
-                
-                # 新しいメッセージも含める
-                recent_messages_with_new = list(recent_messages) + [
+                # 全履歴 + 新しいメッセージ
+                all_messages = list(request_data.history) + [
                     ChatMessage(role="user", text=request_data.new_message),
                     ChatMessage(role="model", text=ai_reply_text)
                 ]
                 
-                print(f"  📝 Summarizing {len(recent_messages_with_new)} messages...")
-                summary_text = generate_conversation_summary(recent_messages_with_new)
-                if summary_text:
-                    # 要約を「特別な記憶」として保存（ベクトル化）
-                    summary_memory = save_memory_with_embedding(
-                        mate_id=request_data.mate_id,
-                        user_id=current_user.id,  # type: ignore
-                        message=summary_text,  # 要約テキスト
-                        role="summary",
-                        session=session,
-                        is_summary=True,
-                        summary=summary_text
-                    )
-                    print(f"  💾 Saved summary memory (turn {current_turn_count}): {summary_text[:100]}...")
-                    print(f"  ✅ Summary memory saved: {summary_memory.id if summary_memory else 'FAILED'}")
+                # 要約対象の範囲を計算
+                # 直近RAG_SUMMARY_OFFSET往復（=OFFSET*2メッセージ）は除外
+                # その前のRAG_SUMMARY_INTERVAL往復（=INTERVAL*2メッセージ）を要約
+                exclude_recent = RAG_SUMMARY_OFFSET * 2  # 直近10往復 = 20メッセージを除外
+                summarize_count = RAG_SUMMARY_INTERVAL * 2  # 10往復 = 20メッセージを要約
+                
+                # 要約対象の範囲
+                end_idx = len(all_messages) - exclude_recent
+                start_idx = max(0, end_idx - summarize_count)
+                
+                if end_idx > start_idx:
+                    messages_to_summarize = all_messages[start_idx:end_idx]
+                    
+                    print(f"  📝 Summarizing messages [{start_idx}:{end_idx}] ({len(messages_to_summarize)} messages)...")
+                    print(f"     (Excluding recent {exclude_recent} messages that are sent to API)")
+                    
+                    summary_text = generate_conversation_summary(messages_to_summarize)
+                    if summary_text:
+                        # 要約を「特別な記憶」として保存（ベクトル化）
+                        summary_memory = save_memory_with_embedding(
+                            mate_id=request_data.mate_id,
+                            user_id=current_user.id,  # type: ignore
+                            message=summary_text,  # 要約テキスト
+                            role="summary",
+                            session=session,
+                            is_summary=True,
+                            summary=summary_text
+                        )
+                        print(f"  💾 Saved summary memory (turn {current_turn_count}): {summary_text[:100]}...")
+                        print(f"  ✅ Summary memory saved: {summary_memory.id if summary_memory else 'FAILED'}")
+                    else:
+                        print(f"  ℹ️  No important info to summarize")
                 else:
-                    print(f"  ℹ️  No important info to summarize")
+                    print(f"  ℹ️  Not enough history to summarize (need at least {exclude_recent + summarize_count} messages)")
             else:
-                print(f"  ⏭️  Turn count: {current_turn_count} - Skipping (next summary at {(current_turn_count // RAG_SUMMARY_INTERVAL + 1) * RAG_SUMMARY_INTERVAL})")
+                next_summary_at = ((current_turn_count // RAG_SUMMARY_INTERVAL) + 1) * RAG_SUMMARY_INTERVAL
+                print(f"  ⏭️  Turn count: {current_turn_count} - Skipping (next summary at {next_summary_at})")
             
             session.commit()
             print(f"✅ RAG memory committed")

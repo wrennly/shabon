@@ -31,9 +31,10 @@ export const ShabonInput: React.FC<ShabonInputProps> = ({
     const theme = Colors[colorScheme ?? 'light'];
     const [isFocused, setIsFocused] = useState(false);
 
-    // Adjust height for multiline if not specified
-    const finalHeight = height === 50 && multiline ? 120 : height;
-    const borderRadius = multiline ? 24 : (typeof height === 'number' ? height / 2 : 25);
+    // 単一行のときのみ固定高さ、multiline のときはオートレイアウトに任せる
+    const isMultiline = !!multiline;
+    const finalHeight = isMultiline ? undefined : height;
+    const borderRadius = isMultiline ? 24 : (typeof height === 'number' ? height / 2 : 25);
 
     return (
         <View style={[styles.wrapper, containerStyle, { width: width as any }]}>
@@ -55,15 +56,17 @@ export const ShabonInput: React.FC<ShabonInputProps> = ({
                     containerStyle
                 ]}
             >
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, !isMultiline && { height: '100%' }]}>
                     {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
                     <TextInput
                         style={[
                             styles.input,
                             { 
                                 color: isDark ? '#FFF' : '#333',
-                                paddingTop: multiline ? 15 : 0, // Add padding for textarea
-                                textAlignVertical: multiline ? 'top' : 'center',
+                                paddingTop: isMultiline ? 12 : 0,
+                                paddingBottom: isMultiline ? 10 : 0,
+                                textAlignVertical: isMultiline ? 'top' : 'center',
+                                height: isMultiline ? undefined : '100%',
                                 paddingLeft: leftIcon ? 8 : 20,
                                 paddingRight: rightIcon ? 8 : 20,
                                 ...Platform.select({
@@ -110,12 +113,10 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        height: '100%',
     },
     input: {
         flex: 1,
         fontSize: 16,
-        height: '100%',
     },
     leftIcon: {
         paddingLeft: 16,

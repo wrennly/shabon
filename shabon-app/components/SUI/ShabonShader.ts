@@ -110,8 +110,8 @@ vec4 main(vec2 fragCoord) {
     // Modulate start based on diagonal to make Bottom-Right significantly wider
     // (uv.x + uv.y) / 2.0 ranges from 0.0 (Top-Left) to 1.0 (Bottom-Right)
     float diagonal = (uv.x + uv.y) * 0.5;
-    // Top-Left: 0.45 (Narrow), Bottom-Right: -0.1 (Full fill + extra)
-    float rainbowStart = mix(0.45, -0.1, diagonal);
+    // Top-Left: 0.5 (Narrow), Bottom-Right: -0.6 (Much wider, reaches center)
+    float rainbowStart = mix(0.5, -0.6, diagonal);
     
     // Apply iRainbowStrength to control visibility
     float rainbowMask = smoothstep(rainbowStart, 0.5, dist) * iRainbowStrength;
@@ -202,6 +202,7 @@ vec4 main(vec2 fragCoord) {
     finalColor += vec3(1.0) * fresnel * 0.15;
     // Only add highlight color if we are showing highlights (based on fill alpha)
     finalColor += vec3(1.0) * highlight * iFillAlpha;
+    
     
     return vec4(finalColor * alpha, alpha);
 }

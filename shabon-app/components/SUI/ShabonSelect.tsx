@@ -2,8 +2,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View, ViewStyle, DimensionValue, Platform } from 'react-native';
-import { ShabonCard } from './ShabonCard';
 import { Colors } from '@/constants/theme';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Option {
     label: string;
@@ -64,7 +65,7 @@ export const ShabonSelect: React.FC<ShabonSelectProps> = ({
                         <Text style={[styles.text, { color: selectedOption ? (isDark ? '#FFF' : '#333') : '#8E8E93' }]}>
                             {displayText}
                         </Text>
-                        <Text style={[styles.icon, { color: isDark ? '#AAA' : '#666' }]}>▼</Text>
+                        <Ionicons name="chevron-down" size={18} color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'} />
                     </View>
                 </View>
             </TouchableOpacity>
@@ -76,59 +77,91 @@ export const ShabonSelect: React.FC<ShabonSelectProps> = ({
                 onRequestClose={() => setVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <BlurView intensity={20} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
                     <TouchableOpacity 
                         style={StyleSheet.absoluteFill} 
                         onPress={() => setVisible(false)} 
                     />
                     
                     <View style={styles.modalContent}>
-                        <ShabonCard 
-                            width={300} 
-                            height={Math.min(options.length * 50 + 20, 400)} 
-                            style={{ 
-                                borderRadius: 20,
-                                backgroundColor: isDark ? 'rgba(28,28,30,0.8)' : 'rgba(255,255,255,0.8)',
-                                borderWidth: 1,
-                                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                            }}
-                            contentStyle={{ padding: 0 }}
-                            rainbowStrength={0.0} // No rainbow for dropdown list
-                            fillAlpha={0.0} // Transparent center
-                        >
-                            <FlatList
-                                data={options}
-                                keyExtractor={(item) => item.value}
-                                contentContainerStyle={{ padding: 10 }}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.optionItem,
-                                            { 
-                                                backgroundColor: item.value === value ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') : 'transparent',
-                                                borderRadius: 12,
-                                                marginBottom: 4
-                                            }
-                                        ]}
-                                        onPress={() => {
-                                            onSelect(item.value);
-                                            setVisible(false);
-                                        }}
-                                    >
-                                        <Text style={[
-                                            styles.optionText, 
-                                            { 
-                                                color: isDark ? '#FFF' : '#333',
-                                                fontWeight: item.value === value ? 'bold' : 'normal'
-                                            }
-                                        ]}>
-                                            {item.label}
-                                        </Text>
-                                        {item.value === value && <Text style={{ color: isDark ? '#FFF' : '#333' }}>✓</Text>}
-                                    </TouchableOpacity>
-                                )}
-                            />
-                        </ShabonCard>
+                        {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+                            <GlassView style={[styles.glassModalContainer, { height: Math.min(options.length * 50 + 20, 400) }]}>
+                                <FlatList
+                                    data={options}
+                                    keyExtractor={(item) => item.value}
+                                    contentContainerStyle={{ padding: 10 }}
+                                    showsVerticalScrollIndicator={false}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.optionItem,
+                                                { 
+                                                    backgroundColor: item.value === value ? 'rgba(0,0,0,0.08)' : 'transparent',
+                                                    borderRadius: 12,
+                                                    marginBottom: 4
+                                                }
+                                            ]}
+                                            onPress={() => {
+                                                // 選択済みなら解除、未選択なら選択
+                                                onSelect(item.value === value ? '' : item.value);
+                                                setVisible(false);
+                                            }}
+                                        >
+                                            <Text style={[
+                                                styles.optionText, 
+                                                { 
+                                                    color: '#000000',
+                                                    fontWeight: item.value === value ? 'bold' : 'normal'
+                                                }
+                                            ]}>
+                                                {item.label}
+                                            </Text>
+                                            {item.value === value && <Text style={{ color: '#000000' }}>✓</Text>}
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            </GlassView>
+                        ) : (
+                            <BlurView 
+                                intensity={80} 
+                                tint="light"
+                                style={[styles.blurModalContainer, { height: Math.min(options.length * 50 + 20, 400) }]}
+                            >
+                                <FlatList
+                                    data={options}
+                                    keyExtractor={(item) => item.value}
+                                    contentContainerStyle={{ padding: 10 }}
+                                    showsVerticalScrollIndicator={false}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.optionItem,
+                                                { 
+                                                    backgroundColor: item.value === value ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') : 'transparent',
+                                                    borderRadius: 12,
+                                                    marginBottom: 4
+                                                }
+                                            ]}
+                                            onPress={() => {
+                                                // 選択済みなら解除、未選択なら選択
+                                                onSelect(item.value === value ? '' : item.value);
+                                                setVisible(false);
+                                            }}
+                                        >
+                                            <Text style={[
+                                                styles.optionText, 
+                                                { 
+                                                    color: isDark ? '#FFF' : '#333',
+                                                    fontWeight: item.value === value ? 'bold' : 'normal'
+                                                }
+                                            ]}>
+                                                {item.label}
+                                            </Text>
+                                            {item.value === value && <Text style={{ color: isDark ? '#FFF' : '#333' }}>✓</Text>}
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            </BlurView>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -156,14 +189,11 @@ const styles = StyleSheet.create({
     text: {
         fontSize: 16,
     },
-    icon: {
-        fontSize: 12,
-    },
     modalOverlay: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     modalContent: {
         shadowColor: "#000",
@@ -174,6 +204,17 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.30,
         shadowRadius: 4.65,
         elevation: 8,
+    },
+    glassModalContainer: {
+        width: 300,
+        borderRadius: 20,
+        overflow: 'hidden',
+    },
+    blurModalContainer: {
+        width: 300,
+        borderRadius: 20,
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.9)',
     },
     optionItem: {
         flexDirection: 'row',

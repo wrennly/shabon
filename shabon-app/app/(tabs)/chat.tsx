@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Animated, TouchableOpacity, Alert } from 'react-native';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { apiClient, authService } from '@/services/api';
 import { AppHeader } from '@/components/app-header';
-import { ShabonListItem } from '@/components/SUI/ShabonListItem';
-import { ShabonInput } from '@/components/SUI/ShabonInput';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 
 import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 
@@ -71,23 +71,61 @@ export default function MatesScreen() {
     router.push(`/chat/${mate.id}`);
   };
 
+  const handleDeleteMate = async (mateId: number) => {
+    try {
+      // 論理削除API呼び出し（チャット履歴を削除）
+      await apiClient.delete(`/chat/history/${mateId}`);
+      // リストから削除
+      setMates(prev => prev.filter(m => m.id !== mateId));
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+      Alert.alert('エラー', 'チャットの削除に失敗しました');
+    }
+  };
+
   const filteredMates = mates.filter(mate =>
     mate.mate_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const renderRightActions = (mateId: number) => (
+    <TouchableOpacity 
+      style={styles.deleteAction}
+      onPress={() => handleDeleteMate(mateId)}
+    >
+      <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
+    </TouchableOpacity>
+  );
+
   const renderMateItem = ({ item }: { item: Mate }) => (
-    <ShabonListItem
-      title={item.mate_name}
-      subtitle={item.last_message}
-      additionalText={item.mate_id ? `@${item.mate_id}` : undefined}
-      onPress={() => handleMateSelect(item)}
-      chevron={true}
-      style={{ marginHorizontal: 16, marginVertical: 4, width: 'auto' }}
-    />
+    <Swipeable
+      renderRightActions={() => renderRightActions(item.id)}
+      overshootRight={false}
+    >
+      <TouchableOpacity 
+        onPress={() => handleMateSelect(item)}
+        activeOpacity={1}
+        style={styles.listItemContainer}
+      >
+        <View style={[styles.listItemInner, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.2)' }]}>
+          <View style={styles.listItemContent}>
+            <View style={styles.listItemTextContainer}>
+              <Text style={[styles.listItemTitle, { color: theme.text }]}>{item.mate_name}</Text>
+              {item.last_message && (
+                <Text style={styles.listItemSubtitle} numberOfLines={1}>
+                  {item.last_message}
+                </Text>
+              )}
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Swipeable>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={styles.container}>
+      <ShabonBackground />
       <FloatingSettingsButton />
       {loading && !refreshing ? (
         <View style={{ flex: 1 }}>
@@ -136,9 +174,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
   },
-  searchBar: {
-    // backgroundColor: '#f5f5f5', // Handled by component
-  },
   listContainer: {
     paddingVertical: 8,
   },
@@ -146,7 +181,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 40,
   },
-  emptyText: {
-    // color: '#888', // Handled inline
+  emptyText: {},
+  // リストアイテム
+  listItemContainer: {
+    marginHorizontal: 16,
+    marginVertical: 4,
+  },
+  listItemInner: {
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  listItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listItemTextContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  listItemTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  listItemSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  // 削除アクション
+  deleteAction: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    marginVertical: 4,
+    marginRight: 16,
+    borderRadius: 16,
   },
 });

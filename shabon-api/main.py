@@ -247,12 +247,18 @@ async def get_current_user(
         session.commit()
         session.refresh(user)
 
-    # Deny access for deleted users
+    # Reactivate deleted users on re-login
     if user.is_deleted:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="このアカウントは削除されています",
-        )
+        print(f"♻️ Reactivating deleted user: {user.username}")
+        user.is_deleted = False
+        # Restore username if it was modified during deletion
+        if user.username.startswith("deleted_"):
+            user.username = email or supabase_uid
+        # Clear display_name to trigger onboarding again
+        user.display_name = None
+        session.add(user)
+        session.commit()
+        session.refresh(user)
 
     return user
 

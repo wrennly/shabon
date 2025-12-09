@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, Platform, Pressable } from 'react-native';
 import { Text } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 
 import { ShabonButton } from '@/components/SUI/ShabonButton';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { authService } from '@/services/auth';
+import { apiClient } from '@/services/api';
+import { ShabonBackground } from '@/components/SUI/ShabonBackground';
+import { resetHeaderAnimation, prepareHeaderAnimation } from '@/components/app-header';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,6 +38,33 @@ export default function LoginScreen() {
     scopes: ['openid', 'profile', 'email'],
   });
 
+  // ログイン画面がマウントされたらフラグをリセット（イベントは発火しない）
+  useEffect(() => {
+    prepareHeaderAnimation();
+  }, []);
+
+  // 初回ユーザーかどうかを判定して遷移先を決定
+  const navigateAfterLogin = async () => {
+    // チャット画面のヘッダーアニメーションをリセット（ログイン後に再生させるため）
+    resetHeaderAnimation();
+    
+    try {
+      const response = await apiClient.get('/users/me');
+      const user = response.data;
+      
+      // display_name が未設定なら初回登録画面へ
+      if (!user.display_name || user.display_name.trim() === '') {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)/chat');
+      }
+    } catch (error) {
+      console.error('Failed to check user status:', error);
+      // エラー時はとりあえずチャット画面へ
+      router.replace('/(tabs)/chat');
+    }
+  };
+
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
@@ -40,7 +72,7 @@ export default function LoginScreen() {
 
       if (result?.type === 'success' && result.authentication?.idToken) {
         await authService.signInWithGoogle(result.authentication.idToken);
-        router.replace('/(tabs)/chat');
+        await navigateAfterLogin();
       } else {
         setLoading(false);
       }
@@ -62,7 +94,7 @@ export default function LoginScreen() {
     try {
       setTestLoginLoading(true);
       await authService.signInWithPassword(email, password);
-      router.replace('/(tabs)/chat');
+      await navigateAfterLogin();
     } catch (error: any) {
       Alert.alert('テストログインに失敗しました', error.message || 'Unknown error');
     } finally {
@@ -90,7 +122,7 @@ export default function LoginScreen() {
       }
 
       await authService.signInWithApple(credential.identityToken, credential.authorizationCode ?? '');
-      router.replace('/(tabs)/chat');
+      await navigateAfterLogin();
     } catch (error: any) {
       if (error.code !== 'ERR_CANCELED') {
         Alert.alert('Appleログインに失敗しました', error.message);
@@ -100,36 +132,55 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
-      <View style={styles.innerContainer}>
-        <Text style={[styles.title, { color: theme.text }]}>Shabonへようこそ</Text>
-        <Text style={[styles.subtitle, { color: theme.icon }]}>Google または Apple でログイン</Text>
-
-        <ShabonButton
-          title="Googleで続行"
-          onPress={handleGoogleLogin}
-          disabled={!request || loading}
-          loading={loading}
-          variant="primary"
-          width={260}
-          height={52}
-          borderRadius={26}
-          icon={<Ionicons name="logo-google" size={20} color={theme.text} />}
+    <View style={styles.container}>
+      <ShabonBackground />
+      
+      {/* 上部: ロゴとタイトル */}
+      <View style={styles.titleContainer}>
+        <LottieView
+          source={require('@/assets/animations/logo.json')}
+          autoPlay
+          loop={false}
+          speed={0.3}
+          style={styles.logo}
         />
+        <Text style={[styles.title, { color: theme.text }]}>Shabon</Text>
+        <Text style={[styles.subtitle, { color: theme.icon }]}>AIメイトと会話しよう</Text>
+      </View>
 
+      {/* 下部: ログインボタン */}
+      <View style={styles.buttonContainer}>
+        {/* Apple ログイン（iOS のみ、上に配置） */}
         {Platform.OS === 'ios' && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={
-              colorScheme === 'dark'
-                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE
-                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-            }
-            cornerRadius={26}
-            style={{ width: 260, height: 52, marginTop: 16 }}
-            onPress={handleAppleLogin}
-          />
+          <Pressable onPress={handleAppleLogin} disabled={loading} style={styles.glassButtonWrapper}>
+            {isLiquidGlassAvailable() ? (
+              <GlassView style={styles.glassButton} isInteractive>
+                <Ionicons name="logo-apple" size={22} color="#000000" />
+                <Text style={styles.glassButtonText}>Appleで続行</Text>
+              </GlassView>
+            ) : (
+              <View style={[styles.fallbackButton, { backgroundColor: '#000000' }]}>
+                <Ionicons name="logo-apple" size={22} color="#FFFFFF" />
+                <Text style={[styles.glassButtonText, { color: '#FFFFFF' }]}>Appleで続行</Text>
+              </View>
+            )}
+          </Pressable>
         )}
+
+        {/* Google ログイン */}
+        <Pressable onPress={handleGoogleLogin} disabled={!request || loading} style={styles.glassButtonWrapper}>
+          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+            <GlassView style={styles.glassButton} isInteractive>
+              <Ionicons name="logo-google" size={20} color="#000000" />
+              <Text style={styles.glassButtonText}>Googleで続行</Text>
+            </GlassView>
+          ) : (
+            <View style={[styles.fallbackButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+              <Ionicons name="logo-google" size={20} color="#000000" />
+              <Text style={[styles.glassButtonText, { color: '#000000' }]}>Googleで続行</Text>
+            </View>
+          )}
+        </Pressable>
 
         {loading && (
           <View style={styles.loadingOverlay}>
@@ -137,18 +188,15 @@ export default function LoginScreen() {
           </View>
         )}
 
-        <ShabonButton
-          title="テストユーザーでログイン"
-          onPress={handleTestLogin}
-          disabled={testLoginLoading}
-          loading={testLoginLoading}
-          variant="secondary"
-          width={260}
-          height={48}
-          borderRadius={24}
-          style={{ marginTop: 32 }}
-          textStyle={{ color: theme.text }}
-        />
+        {/* テストユーザーログイン（開発用） */}
+        {__DEV__ && (
+          <Pressable onPress={handleTestLogin} disabled={testLoginLoading} style={[styles.glassButtonWrapper, { marginTop: 24 }]}>
+            <View style={[styles.fallbackButton, { backgroundColor: 'rgba(128,128,128,0.3)' }]}>
+              <Ionicons name="person-outline" size={20} color={theme.text} />
+              <Text style={[styles.glassButtonText, { color: theme.text, fontSize: 14 }]}>テストユーザー</Text>
+            </View>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -157,22 +205,61 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  titleContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 60,
   },
-  innerContainer: {
-    width: '100%',
-    paddingHorizontal: 24,
-    alignItems: 'center',
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 32,
+    fontSize: 48,
     fontWeight: '700',
-    marginBottom: 8,
+    letterSpacing: 2,
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 32,
+    marginTop: 8,
+  },
+  buttonContainer: {
+    paddingHorizontal: 32,
+    paddingBottom: 80,
+    alignItems: 'center',
+  },
+  glassButtonWrapper: {
+    width: 280,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    marginTop: 16,
+  },
+  glassButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  fallbackButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  glassButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
   },
   loadingOverlay: {
     position: 'absolute',

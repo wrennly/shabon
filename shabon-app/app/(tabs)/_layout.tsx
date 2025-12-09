@@ -9,8 +9,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const TABS: { key: string; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
   { key: 'chat', icon: 'chatbubbles', label: 'Chat' },
-  { key: 'craft', icon: 'sparkles', label: 'Craft' },
   { key: 'explore', icon: 'search', label: 'Search' },
+  { key: 'craft', icon: 'sparkles', label: 'Craft' },
 ];
 
 export default function TabLayout() {

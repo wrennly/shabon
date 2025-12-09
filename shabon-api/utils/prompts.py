@@ -231,6 +231,7 @@ def build_system_prompt(
         sections.append("## ユーザー情報")
         if user_info.get('display_name'):
             sections.append(f"名前: {user_info['display_name']}")
+            sections.append(f"※会話では「{user_info['display_name']}」と呼んでください")
         if user_info.get('profile'):
             sections.append(f"プロフィール: {user_info['profile']}")
         sections.append("")
@@ -244,6 +245,8 @@ def build_system_prompt(
     # Instructions
     sections.append("## 指示")
     sections.append("上記の設定と会話例に基づいて、自然で一貫性のある会話を行ってください。")
+    if user_info and user_info.get('display_name'):
+        sections.append(f"ユーザーのことは「{user_info['display_name']}」と呼んでください。")
     sections.append("回答は150文字程度で簡潔にしてください。")
     
     return '\n'.join(sections)

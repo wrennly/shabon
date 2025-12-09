@@ -45,17 +45,16 @@ const TabButtonWrapper = ({
   isDark: boolean, 
   theme: any 
 }) => {
-    // Removed scale animations to prevent blurring on high-res screens
-    // Only the rainbow effect will indicate the active state now
+    // スケールアニメーションは入れずに、シャドウと縁取りで立体感を出す
 
     return (
         <View style={styles.buttonContainer}>
-                <BlurView
-                    intensity={Platform.OS === 'ios' ? 20 : 10}
-                    tint={isDark ? 'dark' : 'light'}
-                    style={styles.blurCircle}
-                >
-                                    <ShabonButton
+            <BlurView
+                intensity={Platform.OS === 'ios' ? 20 : 10}
+                tint={isDark ? 'dark' : 'light'}
+                style={styles.blurCircle}
+            >
+                <ShabonButton
                     size={70}
                     onPress={() => onPress(tab.key)}
                     icon={
@@ -66,17 +65,17 @@ const TabButtonWrapper = ({
                         />
                     }
                     variant={isActive ? 'primary' : 'secondary'}
-                        // Only show rainbow on active tab, stronger intensity
-                        rainbowStrength={isActive ? 2.0 : 0.0}
-                        style={{ 
-                            backgroundColor: 'transparent',
-                        }}
-                        containerStyle={{
-                            shadowOpacity: 0,
-                            elevation: 0,
-                            backgroundColor: 'transparent',
-                        }}
-                    />
+                    // Only show rainbow on active tab
+                    rainbowStrength={isActive ? 2.0 : 0.0}
+                    style={{ 
+                        backgroundColor: 'transparent',
+                    }}
+                    containerStyle={{
+                        shadowOpacity: 0,
+                        elevation: 0,
+                        backgroundColor: 'transparent',
+                    }}
+                />
             </BlurView>
         </View>
     );
@@ -128,7 +127,13 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
       borderRadius: 35,
-      overflow: 'hidden',
+      overflow: 'visible',
+      // 立体感を出すためのシャドウ
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      elevation: 10,
   },
   blurCircle: {
       width: 70,
@@ -137,5 +142,6 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden', // Ensure content is clipped to circle
+      backgroundColor: 'rgba(255,255,255,0.12)',
   }
 });

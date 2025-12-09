@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ActivityIndicator, Pressable, TextInput, Keyboard, Animated, Dimensions } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '@/services/api';
-import { ShabonInput } from '@/components/SUI/ShabonInput';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import { ShabonBackground } from '@/components/SUI/ShabonBackground';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -30,6 +29,16 @@ export default function ChatScreen() {
   const [mateName, setMateName] = useState('...');
   const [loading, setLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
+  const lastSentMessageRef = useRef<string>('');
+  const [inputKey, setInputKey] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  
+  // 入力欄のアニメーション
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+  const baseBottom = 20; // キーボードなし時は画面下部から20px
+  const inputBarAnim = useRef(new Animated.Value(baseBottom)).current;
+  const inputBarWidthAnim = useRef(new Animated.Value(0)).current; // 0 = 280px, 1 = 100%
+  const messageListMarginAnim = useRef(new Animated.Value(80)).current; // メッセージリストの下部マージン
 
   useEffect(() => {
     if (mateId) {
@@ -37,12 +46,92 @@ export default function ChatScreen() {
     }
   }, [mateId]);
 
+  // キーボードの表示状態を監視してアニメーション
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setIsKeyboardVisible(true);
+        const kbHeight = e.endCoordinates.height;
+        // キーボードの上 + 8px の位置にアニメーション
+        const targetBottom = kbHeight + 8;
+        Animated.parallel([
+          Animated.timing(inputBarAnim, {
+            toValue: targetBottom,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(inputBarWidthAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(messageListMarginAnim, {
+            toValue: kbHeight + 70, // キーボード + 入力欄の高さ分
+            duration: 200,
+            useNativeDriver: false,
+          }),
+        ]).start();
+      }
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setIsKeyboardVisible(false);
+        // 元の位置に戻るアニメーション
+        Animated.parallel([
+          Animated.timing(inputBarAnim, {
+            toValue: baseBottom,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(inputBarWidthAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(messageListMarginAnim, {
+            toValue: 80, // 入力欄の高さ + 余白
+            duration: 200,
+            useNativeDriver: false,
+          }),
+        ]).start();
+      }
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
   const handleBack = () => {
     if (navigation.canGoBack()) {
       router.back();
     } else {
       router.replace('/(tabs)/chat');
     }
+  };
+
+  const formatMessageSegments = (text: string): { text: string; bold?: boolean }[] => {
+    const segments: { text: string; bold?: boolean }[] = [];
+    const regex = /\*\*(.+?)\*\*/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        segments.push({ text: text.slice(lastIndex, match.index) });
+      }
+      segments.push({ text: match[1], bold: true });
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      segments.push({ text: text.slice(lastIndex) });
+    }
+
+    return segments;
   };
 
   const loadChatHistory = async () => {
@@ -72,19 +161,23 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!newMessage.trim() || isThinking) return;
 
-    const userMessage: ChatMessage = { role: 'user', text: newMessage };
-    // 直前のユーザーメッセージも含めた履歴をバックエンドに渡すため、
-    // ここで updatedHistory を作ってから API に送る
+    const currentText = newMessage;
+    const userMessage: ChatMessage = { role: 'user', text: currentText };
+    // 直前のユーザーメッセージは new_message として別途渡すので、
+    // history には「それ以前」のみを送る
+    const previousHistory: ChatMessage[] = history;
     const updatedHistory: ChatMessage[] = [...history, userMessage];
+    lastSentMessageRef.current = currentText;
     setHistory(updatedHistory);
     setNewMessage('');
+    setInputKey((prev) => prev + 1);
     setIsThinking(true);
 
     try {
       const response = await apiClient.post('/chat/', {
         mate_id: Number(mateId),
         new_message: newMessage,
-        history: updatedHistory,
+        history: previousHistory,
       });
 
       const modelMessage: ChatMessage = {
@@ -101,6 +194,9 @@ export default function ChatScreen() {
       setHistory((prev) => [...prev, errorMessage]);
     } finally {
       setIsThinking(false);
+      // 送信ボタン後にまれにテキストが残るケースを補正
+      // まだ入力値が「最後に送ったテキスト」と同じなら、ここでもう一度空文字にする。
+      setNewMessage((prev) => (prev === lastSentMessageRef.current ? '' : prev));
     }
   };
 
@@ -114,16 +210,25 @@ export default function ChatScreen() {
       <View 
         style={[
           styles.bubble,
-          item.role === 'user' 
-            ? { backgroundColor: theme.tint, borderBottomRightRadius: 4 } 
-            : { backgroundColor: theme.card, borderBottomLeftRadius: 4 }
+          item.role === 'user' ? styles.userBubble : styles.modelBubble,
         ]}
       >
-        <Text style={[
-          styles.messageText,
-          item.role === 'user' ? { color: '#fff' } : { color: theme.text }
-        ]}>
-          {item.text}
+        <Text
+          style={[
+            styles.messageText,
+            item.role === 'user'
+              ? { color: '#000000' }
+              : { color: theme.text },
+          ]}
+        >
+          {formatMessageSegments(item.text).map((seg, idx) => (
+            <Text
+              key={idx}
+              style={seg.bold ? styles.messageTextBold : undefined}
+            >
+              {seg.text}
+            </Text>
+          ))}
         </Text>
       </View>
     </View>
@@ -138,27 +243,35 @@ export default function ChatScreen() {
     );
   }
 
+  // 幅のアニメーション
+  const animatedWidth = inputBarWidthAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [280, SCREEN_WIDTH - 32], // 280px から 画面幅-32px
+  });
+
   return (
-    <LinearGradient
-      colors={colorScheme === 'dark' ? ['#1a1a2e', '#16213e'] : ['#D0E8F2', '#D9D2E9']}
-      style={styles.container}
-    >
-      <View style={[styles.header, { borderBottomWidth: 0, height: Platform.OS === 'ios' ? 100 : 80 }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButtonContainer}>
-            <BlurView intensity={20} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.backButtonBlur}>
+    <View style={styles.container}>
+      <ShabonBackground />
+      
+      {/* ヘッダー */}
+      <View style={styles.header}>
+        <Pressable onPress={handleBack} style={styles.backButtonContainer}>
+            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+              <GlassView style={styles.backButtonGlass} isInteractive>
+                <Ionicons name="chevron-back" size={24} color="#000000" style={{ marginRight: 2 }} />
+              </GlassView>
+            ) : (
+              <View style={[styles.backButtonFallback, { backgroundColor: colorScheme === 'dark' ? 'rgba(50,50,50,0.8)' : 'rgba(255,255,255,0.8)' }]}>
                 <Ionicons name="chevron-back" size={24} color={theme.tint} style={{ marginRight: 2 }} />
-            </BlurView>
-        </TouchableOpacity>
-        <View style={styles.titleContainer}>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
-        </View>
+              </View>
+            )}
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.chatContainer}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+      {/* メッセージリスト */}
+      <Animated.View style={[styles.messageListContainer, { marginBottom: messageListMarginAnim }]}>
         <FlatList
           ref={flatListRef}
           data={[...history].reverse()}
@@ -167,43 +280,100 @@ export default function ChatScreen() {
           contentContainerStyle={styles.messageList}
           inverted
         />
+      </Animated.View>
 
-        {isThinking && (
-          <View style={[styles.thinkingContainer]}>
-            <ActivityIndicator size="small" color={theme.icon} />
-            <Text style={[styles.thinkingText, { color: theme.icon }]}>
-              {mateName}が考え中...
-            </Text>
-          </View>
-        )}
-
-        <View style={[styles.inputContainer, { borderTopWidth: 0 }]}>
-          <View style={styles.inputWrapper}>
-            <ShabonInput
-              placeholder="メッセージを入力..."
-              value={newMessage}
-              onChangeText={setNewMessage}
-              multiline
-              style={styles.input}
-              editable={!isThinking}
-              height={40}
-              containerStyle={{ marginBottom: 0 }}
-            />
-          </View>
-          <TouchableOpacity 
-            onPress={handleSend} 
-            disabled={!newMessage.trim() || isThinking}
-            style={[
-                styles.sendButton, 
-                (!newMessage.trim() || isThinking) && { opacity: 0.5 },
-                { backgroundColor: theme.tint }
-            ]}
-          >
-            <Ionicons name="paper-plane" size={20} color="#FFF" style={{ marginLeft: -2, marginTop: 1 }} />
-          </TouchableOpacity>
+      {isThinking && (
+        <View style={[styles.thinkingContainer]}>
+          <ActivityIndicator size="small" color={theme.icon} />
+          <Text style={[styles.thinkingText, { color: theme.icon }]}>
+            {mateName}が考え中...
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+      )}
+
+      {/* 入力欄（固定位置 + アニメーション） */}
+      <Animated.View style={[
+        styles.inputContainer,
+        { 
+          bottom: inputBarAnim,
+          alignItems: isKeyboardVisible ? 'stretch' : 'center',
+        }
+      ]}>
+        <Animated.View style={{ width: animatedWidth }}>
+          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+            <GlassView style={styles.inputGlassContainer}>
+              <TextInput
+                key={inputKey}
+                placeholder="メッセージを入力..."
+                placeholderTextColor="rgba(0,0,0,0.4)"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+                style={styles.textInput}
+                editable={!isThinking}
+              />
+              <Pressable
+                onPress={handleSend}
+                disabled={!newMessage.trim() || isThinking}
+                accessibilityLabel="メッセージを送信"
+                style={[
+                  styles.sendButtonContainer,
+                  { opacity: (!newMessage.trim() || isThinking) ? 0.4 : 1 },
+                ]}
+              >
+                {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+                  <GlassView style={styles.sendButtonGlass} isInteractive>
+                    {isThinking ? (
+                      <ActivityIndicator size="small" color="#000000" />
+                    ) : (
+                      <Ionicons name="arrow-up" size={20} color="#000000" />
+                    )}
+                  </GlassView>
+                ) : (
+                  <View style={styles.sendButtonFallback}>
+                    {isThinking ? (
+                      <ActivityIndicator size="small" color="#000000" />
+                    ) : (
+                      <Ionicons name="arrow-up" size={20} color="#000000" />
+                    )}
+                  </View>
+                )}
+              </Pressable>
+            </GlassView>
+          ) : (
+            <View style={styles.inputFallbackContainer}>
+              <TextInput
+                key={inputKey}
+                placeholder="メッセージを入力..."
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+                style={[styles.textInput, { color: '#FFFFFF' }]}
+                editable={!isThinking}
+              />
+              <Pressable
+                onPress={handleSend}
+                disabled={!newMessage.trim() || isThinking}
+                accessibilityLabel="メッセージを送信"
+                style={[
+                  styles.sendButtonContainer,
+                  { opacity: (!newMessage.trim() || isThinking) ? 0.4 : 1 },
+                ]}
+              >
+                <View style={styles.sendButtonFallbackDark}>
+                  {isThinking ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                  )}
+                </View>
+              </Pressable>
+            </View>
+          )}
+        </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -220,47 +390,44 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
     flexDirection: 'row',
-    alignItems: 'flex-end', // Align items to bottom of header area
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingTop: Platform.OS === 'ios' ? 54 : 16,
+    paddingBottom: 8,
   },
   backButtonContainer: {
     borderRadius: 20,
     overflow: 'hidden',
-    zIndex: 101,
   },
-  backButtonBlur: {
+  backButtonGlass: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  backButtonFallback: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
-  },
-  titleContainer: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 18, // Adjust to align with back button
-      alignItems: 'center',
-      zIndex: 100,
-      pointerEvents: 'none', // Allow clicks to pass through to back button if overlapping (though they shouldn't)
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
-  },
-  chatContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 100 : 80, // Add padding to content to avoid overlap with absolute header
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40, // 戻るボタンと同じ幅でバランスを取る
+  },
+  messageListContainer: {
+    flex: 1,
   },
   messageList: {
     flexGrow: 1,
@@ -281,33 +448,88 @@ const styles = StyleSheet.create({
     maxWidth: '75%',
     padding: 12,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)', // Transparent bubble
+  },
+  userBubble: {
+    backgroundColor: 'rgba(0,122,255,0.1)', // 薄い青
+    borderBottomRightRadius: 4,
+    borderBottomLeftRadius: 18,
+  },
+  modelBubble: {
+    backgroundColor: 'rgba(255,255,255,0.26)',
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
   },
+  messageTextBold: {
+    fontWeight: '700',
+  },
   inputContainer: {
-    padding: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+  },
+  inputGlassContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-end', // 送信ボタンを下寄せ
+    borderRadius: 22,
+    paddingLeft: 14,
+    paddingRight: 5,
+    paddingVertical: 5,
+    minHeight: 44,
   },
-  inputWrapper: {
+  inputFallbackContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end', // 送信ボタンを下寄せ
+    borderRadius: 22,
+    paddingLeft: 14,
+    paddingRight: 5,
+    paddingVertical: 5,
+    minHeight: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  textInput: {
     flex: 1,
-    marginRight: 8,
+    fontSize: 16,
+    color: '#000000',
+    maxHeight: 80, // 約3行分
+    minHeight: 34,
+    paddingTop: 8,
+    paddingBottom: 8,
+    lineHeight: 18,
   },
-  input: {
-    maxHeight: 100,
-    minHeight: 36,
+  sendButtonContainer: {
+    marginLeft: 8,
   },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  sendButtonGlass: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0, // Align with input
+  },
+  sendButtonFallback: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  sendButtonFallbackDark: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.8)',
   },
   thinkingContainer: {
     flexDirection: 'row',
