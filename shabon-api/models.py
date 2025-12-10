@@ -77,6 +77,7 @@ class AiMateBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     is_public: bool = Field(default=False, index=True)
     is_deleted: bool = Field(default=False, index=True)  # Logical deletion flag
+    image_url: Optional[str] = None  # Supabase Storage URL for mate image
 
 class AiMates(AiMateBase, table=True):
     __tablename__: str = "ai_mates"

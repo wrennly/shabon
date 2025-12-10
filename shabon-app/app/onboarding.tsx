@@ -168,11 +168,16 @@ export default function OnboardingScreen() {
               </Text>
             </ScrollView>
 
-            <Pressable
-              style={[styles.modalButton, { backgroundColor: theme.tint }]}
-              onPress={() => setShowPrivacyModal(false)}
-            >
-              <Text style={styles.modalButtonText}>閉じる</Text>
+            <Pressable onPress={() => setShowPrivacyModal(false)}>
+              {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+                <GlassView style={styles.modalButtonGlass} isInteractive>
+                  <Text style={styles.modalButtonTextGlass}>閉じる</Text>
+                </GlassView>
+              ) : (
+                <View style={[styles.modalButton, { backgroundColor: theme.tint }]}>
+                  <Text style={styles.modalButtonText}>閉じる</Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>
@@ -314,6 +319,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  modalButtonGlass: {
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  modalButtonTextGlass: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
   },
 });
 

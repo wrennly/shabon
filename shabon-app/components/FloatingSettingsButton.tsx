@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform, Pressable, Animated, Linking } from 'react-native';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { authService } from '@/services/api';
 import { analytics, AnalyticsEvents } from '@/services/analytics';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -16,10 +16,21 @@ export function FloatingSettingsButton() {
   const theme = Colors[colorScheme ?? 'light'];
   const [menuVisible, setMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   
   // アニメーション用
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  // タブ切り替え時にメニューを閉じる
+  useEffect(() => {
+    if (menuVisible) {
+      // アニメーションなしで即座に閉じる
+      setMenuVisible(false);
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0);
+    }
+  }, [pathname]);
   
   const openMenu = () => {
     // 初期値にリセット

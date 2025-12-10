@@ -15,6 +15,12 @@ module.exports = ({ config }) => {
       ...(config.plugins || []),
       "expo-secure-store",
       "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "メイトの画像を選択するためにギャラリーへのアクセスが必要です",
+        },
+      ],
       // iOS 17+ デプロイメントターゲット設定（Liquid Glass 用）
       [
         'expo-build-properties',

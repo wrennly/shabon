@@ -3,9 +3,12 @@ Mate (AIキャラクター) 関連のエンドポイント
 """
 from typing import List, Optional, Dict
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, status, UploadFile, File
 from sqlmodel import Session, select, func, or_
 from sqlalchemy.orm import joinedload
+from supabase import create_client, Client
 
 from database import get_session
 from models import (
@@ -27,6 +30,13 @@ router = APIRouter(prefix="/mates", tags=["mates"])
 
 # Dependency injection placeholder (will be set by main.py)
 get_current_user = None
+
+# Supabase client setup
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")  # Service role key for admin operations
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 def current_user_dependency(
     authorization: Optional[str] = Header(None),
@@ -939,3 +949,129 @@ def get_batch_mate_info(
     ]
     
     return response_list
+
+@router.post("/{mate_id}/upload-image")
+async def upload_mate_image(
+    mate_id: int,
+    file: UploadFile = File(...),
+    current_user: Users = Depends(current_user_dependency),
+    session: Session = Depends(get_session)
+):
+    """
+    Upload an image for a mate
+    
+    - Accepts: png, jpg, jpeg, webp
+    - Max size: 5MB
+    - Stores in Supabase Storage bucket 'mate-images'
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
+    
+    # Verify mate ownership
+    mate = session.get(AiMates, mate_id)
+    if not mate:
+        raise HTTPException(status_code=404, detail="Mate not found")
+    if mate.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this mate")
+    if mate.is_deleted:
+        raise HTTPException(status_code=404, detail="Mate not found")
+    
+    # Validate file type
+    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_types)}"
+        )
+    
+    # Validate file size (5MB)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
+    
+    # Generate unique filename
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    unique_filename = f"{current_user.id}/{mate_id}/{uuid.uuid4()}.{file_ext}"
+    
+    try:
+        # Delete old image if exists
+        if mate.image_url:
+            old_path = mate.image_url.split('/')[-3:]  # Extract path from URL
+            old_file_path = '/'.join(old_path)
+            try:
+                supabase.storage.from_("mate-images").remove([old_file_path])
+            except Exception as e:
+                print(f"Failed to delete old image: {e}")
+        
+        # Upload to Supabase Storage
+        response = supabase.storage.from_("mate-images").upload(
+            path=unique_filename,
+            file=contents,
+            file_options={"content-type": file.content_type}
+        )
+        
+        # Get public URL
+        public_url = supabase.storage.from_("mate-images").get_public_url(unique_filename)
+        
+        # Update mate record
+        mate.image_url = public_url
+        mate.updated_at = datetime.now()
+        session.add(mate)
+        session.commit()
+        session.refresh(mate)
+        
+        return {
+            "success": True,
+            "image_url": public_url,
+            "mate_id": mate_id
+        }
+    
+    except Exception as e:
+        session.rollback()
+        print(f"Image upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
+
+@router.delete("/{mate_id}/image")
+def delete_mate_image(
+    mate_id: int,
+    current_user: Users = Depends(current_user_dependency),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete the image for a mate
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
+    
+    # Verify mate ownership
+    mate = session.get(AiMates, mate_id)
+    if not mate:
+        raise HTTPException(status_code=404, detail="Mate not found")
+    if mate.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this mate")
+    if mate.is_deleted:
+        raise HTTPException(status_code=404, detail="Mate not found")
+    
+    if not mate.image_url:
+        raise HTTPException(status_code=404, detail="No image to delete")
+    
+    try:
+        # Extract file path from URL
+        old_path = mate.image_url.split('/')[-3:]  # user_id/mate_id/filename
+        old_file_path = '/'.join(old_path)
+        
+        # Delete from Supabase Storage
+        supabase.storage.from_("mate-images").remove([old_file_path])
+        
+        # Update mate record
+        mate.image_url = None
+        mate.updated_at = datetime.now()
+        session.add(mate)
+        session.commit()
+        
+        return {"success": True, "message": "Image deleted successfully"}
+    
+    except Exception as e:
+        session.rollback()
+        print(f"Image deletion error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete image: {str(e)}")

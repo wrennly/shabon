@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, TouchableOpacity, Alert, Modal, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, TouchableOpacity, Alert, Modal, Pressable, Image } from 'react-native';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -11,6 +11,8 @@ import { ShabonSwitch } from '@/components/SUI/ShabonSwitch';
 import { ShabonSelect } from '@/components/SUI/ShabonSelect';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 import { useIsFocused } from '@react-navigation/native';
@@ -57,6 +59,9 @@ export default function MateBuilderScreen() {
   const [submitMessage, setSubmitMessage] = useState('');
   const [showDerivativeModal, setShowDerivativeModal] = useState(false);
   const [agreedToDerivative, setAgreedToDerivative] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [currentMateId, setCurrentMateId] = useState<number | null>(null);
   
   // Menu state for select inputs (No longer needed for ShabonSelect)
   // const [menuVisible, setMenuVisible] = useState<Record<string, boolean>>({});
@@ -192,6 +197,13 @@ export default function MateBuilderScreen() {
       });
 
       const newMate = response.data;
+      setCurrentMateId(newMate.id);
+      
+      // Upload image if selected
+      if (imageUri) {
+        await uploadImage(imageUri, newMate.id);
+      }
+      
       router.replace(`/chat/${newMate.id}`);
     } catch (error: any) {
       console.error('Failed to create mate:', error);
@@ -201,6 +213,118 @@ export default function MateBuilderScreen() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const optimizeImage = async (uri: string): Promise<string> => {
+    try {
+      // 画像を512x512にリサイズして圧縮
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 512, height: 512 } }],
+        { 
+          compress: 0.7, 
+          format: ImageManipulator.SaveFormat.JPEG 
+        }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.error('Image optimization failed:', error);
+      return uri; // 最適化失敗時は元のURIを返す
+    }
+  };
+
+  const pickImage = async () => {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('権限が必要です', 'ギャラリーへのアクセス権限を許可してください');
+      return;
+    }
+
+    // Pick image with optimization
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8, // Image Pickerでの初期品質
+      exif: false, // EXIF情報を削除してサイズ削減
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      
+      // 画像を最適化（512x512にリサイズ＋圧縮）
+      const optimizedUri = await optimizeImage(asset.uri);
+      setImageUri(optimizedUri);
+      
+      // If we have a mate ID (after creation), upload immediately
+      if (currentMateId) {
+        await uploadImage(optimizedUri, currentMateId);
+      }
+    }
+  };
+
+  const uploadImage = async (uri: string, mateId: number) => {
+    setImageUploading(true);
+    try {
+      // Create form data
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'image.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+        name: filename,
+        type,
+      } as any);
+
+      // Upload to backend
+      const response = await apiClient.post(
+        `/mates/${mateId}/upload-image`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      if (response.data.success) {
+        Alert.alert('成功', '画像をアップロードしました');
+      }
+    } catch (error: any) {
+      console.error('Image upload failed:', error);
+      Alert.alert('エラー', '画像のアップロードに失敗しました');
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const deleteImage = async () => {
+    if (!currentMateId) return;
+
+    Alert.alert(
+      '画像を削除',
+      '本当に画像を削除しますか？',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.delete(`/mates/${currentMateId}/image`);
+              setImageUri(null);
+              Alert.alert('成功', '画像を削除しました');
+            } catch (error) {
+              console.error('Image deletion failed:', error);
+              Alert.alert('エラー', '画像の削除に失敗しました');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderInput = (attr: SchemaAttribute) => {
@@ -242,7 +366,7 @@ export default function MateBuilderScreen() {
                       <Text
                         style={[
                           styles.pillText,
-                          { color: selected ? '#000000' : theme.text },
+                          { color: selected ? '#000000' : '#8E8E93' },
                         ]}
                       >
                         {opt.display_name}
@@ -314,6 +438,42 @@ export default function MateBuilderScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.innerContent}>
           
+          {/* 画像アップロード */}
+          <View style={styles.imageSection}>
+            {imageUri ? (
+              <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                <View style={styles.imageEditOverlay}>
+                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                onPress={pickImage} 
+                style={styles.imageContainer}
+                disabled={imageUploading}
+              >
+                {imageUploading ? (
+                  <View style={styles.imagePreview}>
+                    <ActivityIndicator size="large" color={theme.tint} />
+                  </View>
+                ) : (
+                  <View style={styles.imagePreview}>
+                    <Ionicons name="person" size={40} color={theme.icon} />
+                  </View>
+                )}
+                <View style={styles.imageEditOverlay}>
+                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            )}
+            {imageUri && (
+              <TouchableOpacity onPress={deleteImage} style={styles.deleteImageButton}>
+                <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
           {/* メイトID */}
           <View style={styles.mateIdContainer}>
             <View>
@@ -370,7 +530,6 @@ export default function MateBuilderScreen() {
               value={isPublic} 
               onValueChange={(value) => {
                 if (value) {
-                  // 先にトグルをオンにして、少し遅延してからモーダルを表示（毎回）
                   setIsPublic(true);
                   setTimeout(() => {
                     setShowDerivativeModal(true);
@@ -488,7 +647,7 @@ export default function MateBuilderScreen() {
 
                 <View style={styles.modalButtons}>
                   <Pressable
-                    style={[styles.modalButton, styles.modalButtonCancelGlass]}
+                    style={[styles.modalButton, styles.modalButtonCancelSimple]}
                     onPress={() => {
                       // モーダルを閉じてからトグルを戻す
                       setShowDerivativeModal(false);
@@ -516,35 +675,39 @@ export default function MateBuilderScreen() {
                 </View>
               </GlassView>
             ) : (
-              <View style={[
-                styles.modalContent,
-                { backgroundColor: isDark ? 'rgba(44,44,46,0.95)' : 'rgba(255,255,255,0.95)' }
-              ]}>
-                <Text style={[styles.modalTitle, { color: theme.text }]}>
+              <BlurView
+                intensity={80}
+                tint="light"
+                style={[
+                  styles.modalContentGlass,
+                  { backgroundColor: 'rgba(255, 255, 255, 0.15)' }
+                ]}
+              >
+                <Text style={[styles.modalTitle, { color: '#000000' }]}>
                   公開に関する注意事項
                 </Text>
                 
-                <Text style={[styles.modalText, { color: theme.text }]}>
+                <Text style={[styles.modalText, { color: '#000000' }]}>
                   メイトを公開する前に、以下の内容を確認してください。
                 </Text>
                 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
+                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
                     ⚠️ 二次創作について
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: theme.icon }]}>
+                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
                     既存のキャラクター（アニメ、漫画、ゲーム、小説など）を元にしたメイトの公開は、著作権法に違反する可能性があります。
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: theme.icon }]}>
+                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
                     二次創作メイトは「非公開」でのみご利用ください。
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
+                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
                     ✅ 公開できるメイト
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: theme.icon }]}>
+                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
                     • オリジナルキャラクター{'\n'}
                     • 自分で考えた設定のメイト{'\n'}
                     • 著作権を侵害しないメイト
@@ -552,10 +715,10 @@ export default function MateBuilderScreen() {
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
+                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
                     ❌ 公開できないメイト
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: theme.icon }]}>
+                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
                     • アニメ・漫画のキャラクター{'\n'}
                     • ゲームのキャラクター{'\n'}
                     • 実在の人物{'\n'}
@@ -565,16 +728,15 @@ export default function MateBuilderScreen() {
 
                 <View style={styles.modalButtons}>
                   <Pressable
-                    style={[styles.modalButton, styles.modalButtonCancel]}
+                    style={[styles.modalButton, styles.modalButtonCancelSimple]}
                     onPress={() => {
-                      // モーダルを閉じてからトグルを戻す
                       setShowDerivativeModal(false);
                       setTimeout(() => {
                         setIsPublic(false);
                       }, 200);
                     }}
                   >
-                    <Text style={[styles.modalButtonText, { color: theme.text }]}>
+                    <Text style={[styles.modalButtonText, { color: '#000000' }]}>
                       キャンセル
                     </Text>
                   </Pressable>
@@ -591,7 +753,7 @@ export default function MateBuilderScreen() {
                     </Text>
                   </Pressable>
                 </View>
-              </View>
+              </BlurView>
             )}
           </View>
         </Modal>
@@ -674,14 +836,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-        width: 0,
-        height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 8,
   },
   errorText: {
     color: '#FF3B30',
@@ -717,7 +871,7 @@ const styles = StyleSheet.create({
   },
   pillSelected: {
     backgroundColor: 'rgba(255,255,255,0.6)',
-    borderColor: '#007AFF',
+    borderColor: '#5AC8FA',
   },
   pillText: {
     fontSize: 15,
@@ -810,6 +964,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 22,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtonCancel: {
     backgroundColor: 'rgba(128, 128, 128, 0.2)',
@@ -817,11 +972,52 @@ const styles = StyleSheet.create({
   modalButtonCancelGlass: {
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
+  modalButtonCancelSimple: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
   modalButtonAgree: {
     backgroundColor: '#007AFF',
   },
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  imageSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 12,
+  },
+  imageContainer: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imageEditOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  deleteImageButton: {
+    marginTop: 12,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
   },
 });

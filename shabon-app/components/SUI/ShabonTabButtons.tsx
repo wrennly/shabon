@@ -142,6 +142,6 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden', // Ensure content is clipped to circle
-      backgroundColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: 'rgba(255,255,255,0.4)',
   }
 });

@@ -16,3 +16,5 @@ redis
 aioredis
 pgvector
 numpy
+supabase
+python-multipart
