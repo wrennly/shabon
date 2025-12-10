@@ -1,0 +1,11 @@
+{
+  "buildCommand": "EXPO_PUBLIC_PLATFORM=web npm run build:web",
+  "outputDirectory": "dist",
+  "devCommand": "npm run web",
+  "installCommand": "npm install",
+  "framework": null,
+  "env": {
+    "EXPO_PUBLIC_PLATFORM": "web"
+  }
+}
+
