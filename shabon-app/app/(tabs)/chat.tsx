@@ -88,12 +88,14 @@ export default function MatesScreen() {
   );
 
   const renderRightActions = (mateId: number) => (
-    <TouchableOpacity 
-      style={styles.deleteAction}
-      onPress={() => handleDeleteMate(mateId)}
-    >
-      <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
-    </TouchableOpacity>
+    <View style={styles.deleteActionContainer}>
+      <TouchableOpacity 
+        style={styles.deleteAction}
+        onPress={() => handleDeleteMate(mateId)}
+      >
+        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+      </TouchableOpacity>
+    </View>
   );
 
   const renderMateItem = ({ item }: { item: Mate }) => (
@@ -210,13 +212,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   // 削除アクション
-  deleteAction: {
-    backgroundColor: '#FF3B30',
+  deleteActionContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
-    marginVertical: 4,
-    marginRight: 16,
-    borderRadius: 16,
+    paddingRight: 16,
+  },
+  deleteAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.15)',
   },
 });

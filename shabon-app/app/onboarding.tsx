@@ -123,7 +123,7 @@ export default function OnboardingScreen() {
           >
             {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
               <GlassView style={styles.registerButtonGlass} isInteractive>
-                <Text style={styles.registerButtonText}>
+                <Text style={[styles.registerButtonText, { color: theme.glassText }]}>
                   {saving ? '登録中...' : 'はじめる'}
                 </Text>
               </GlassView>
@@ -171,7 +171,7 @@ export default function OnboardingScreen() {
             <Pressable onPress={() => setShowPrivacyModal(false)}>
               {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
                 <GlassView style={styles.modalButtonGlass} isInteractive>
-                  <Text style={styles.modalButtonTextGlass}>閉じる</Text>
+                  <Text style={[styles.modalButtonTextGlass, { color: theme.glassText }]}>閉じる</Text>
                 </GlassView>
               ) : (
                 <View style={[styles.modalButton, { backgroundColor: theme.tint }]}>
@@ -270,7 +270,6 @@ const styles = StyleSheet.create({
   registerButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
   },
   registerButtonTextFallback: {
     fontSize: 18,
@@ -330,7 +329,6 @@ const styles = StyleSheet.create({
   modalButtonTextGlass: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
   },
 });
 

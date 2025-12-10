@@ -18,6 +18,7 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    glassText: '#000000', // GlassView用の文字色（ライトモード）
   },
   dark: {
     text: '#ECEDEE',
@@ -28,6 +29,7 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    glassText: '#FFFFFF', // GlassView用の文字色（ダークモード）
   },
 };
 

@@ -126,7 +126,7 @@ export default function ProfileScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButtonContainer}>
           {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
             <GlassView style={styles.backButtonGlass} isInteractive>
-              <Ionicons name="chevron-back" size={24} color="#000000" style={{ marginRight: 2 }} />
+              <Ionicons name="chevron-back" size={24} color={theme.glassText} style={{ marginRight: 2 }} />
             </GlassView>
           ) : (
             <View style={[styles.backButtonFallback, { backgroundColor: colorScheme === 'dark' ? 'rgba(50,50,50,0.8)' : 'rgba(255,255,255,0.8)' }]}>
@@ -172,9 +172,9 @@ export default function ProfileScreen() {
             {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
               <GlassView style={[styles.saveButtonGlass, { opacity: saving ? 0.5 : 1 }]} isInteractive>
                 {saving ? (
-                  <ActivityIndicator size="small" color="#000000" />
+                  <ActivityIndicator size="small" color={theme.glassText} />
                 ) : (
-                  <Text style={styles.saveButtonText}>保存</Text>
+                  <Text style={[styles.saveButtonText, { color: theme.glassText }]}>保存</Text>
                 )}
               </GlassView>
             ) : (
@@ -282,7 +282,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#000000',
   },
   saveButtonTextFallback: {
     fontSize: 17,

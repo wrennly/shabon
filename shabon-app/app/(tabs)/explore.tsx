@@ -158,11 +158,11 @@ export default function ExploreScreen() {
       <View style={styles.mateCardInner}>
         {/* アバター placeholder */}
         <View style={styles.avatarPlaceholder}>
-          <Ionicons name="person" size={32} color="rgba(0,0,0,0.3)" />
+          <Ionicons name="person" size={32} color={colorScheme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'} />
         </View>
-        <Text style={styles.mateName} numberOfLines={1}>{item.mate_name}</Text>
+        <Text style={[styles.mateName, { color: theme.glassText }]} numberOfLines={1}>{item.mate_name}</Text>
         {item.mate_id && (
-          <Text style={styles.mateId} numberOfLines={1}>@{item.mate_id}</Text>
+          <Text style={[styles.mateId, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]} numberOfLines={1}>@{item.mate_id}</Text>
         )}
       </View>
     </Pressable>
@@ -227,11 +227,11 @@ export default function ExploreScreen() {
               styles.searchBarGlass,
               keyboardHeight > 0 && styles.searchBarGlassExpanded
             ]}>
-              <Ionicons name="search" size={18} color="#000000" style={styles.searchIcon} />
+              <Ionicons name="search" size={18} color={theme.glassText} style={styles.searchIcon} />
               <TextInput
                 ref={searchInputRef}
                 placeholder="メイトを検索"
-                placeholderTextColor="rgba(0,0,0,0.4)"
+                placeholderTextColor={theme.glassText}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 style={[styles.searchInput, keyboardHeight > 0 && styles.searchInputExpanded]}
@@ -241,7 +241,7 @@ export default function ExploreScreen() {
               {(searchQuery.length > 0 || keyboardHeight > 0) && (
                 <Pressable onPress={dismissKeyboard} style={styles.closeButton}>
                   <GlassView style={styles.closeButtonGlass} isInteractive>
-                    <Ionicons name="close" size={16} color="#000000" />
+                    <Ionicons name="close" size={16} color={theme.glassText} />
                   </GlassView>
                 </Pressable>
               )}
@@ -256,10 +256,10 @@ export default function ExploreScreen() {
               <TextInput
                 ref={searchInputRef}
                 placeholder="メイトを検索"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={theme.glassText}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                style={[styles.searchInput, { color: '#000000' }, keyboardHeight > 0 && styles.searchInputExpanded]}
+                style={[styles.searchInput, { color: theme.glassText }, keyboardHeight > 0 && styles.searchInputExpanded]}
                 returnKeyType="search"
               />
               {/* ×ボタン（入力があるときのみ表示） */}
@@ -347,7 +347,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     fontSize: 16,
-    color: '#000000',
     height: '100%',
   },
   searchInputExpanded: {
@@ -397,12 +396,10 @@ const styles = StyleSheet.create({
   mateName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#000000',
     textAlign: 'center',
   },
   mateId: {
     fontSize: 12,
-    color: 'rgba(0,0,0,0.5)',
     marginTop: 4,
   },
   emptyContainer: {

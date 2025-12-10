@@ -217,7 +217,7 @@ export default function ChatScreen() {
           style={[
             styles.messageText,
             item.role === 'user'
-              ? { color: '#000000' }
+              ? { color: theme.glassText }
               : { color: theme.text },
           ]}
         >
@@ -258,7 +258,7 @@ export default function ChatScreen() {
         <Pressable onPress={handleBack} style={styles.backButtonContainer}>
             {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
               <GlassView style={styles.backButtonGlass} isInteractive>
-                <Ionicons name="chevron-back" size={24} color="#000000" style={{ marginRight: 2 }} />
+                <Ionicons name="chevron-back" size={24} color={theme.glassText} style={{ marginRight: 2 }} />
               </GlassView>
             ) : (
               <View style={[styles.backButtonFallback, { backgroundColor: colorScheme === 'dark' ? 'rgba(50,50,50,0.8)' : 'rgba(255,255,255,0.8)' }]}>
@@ -305,11 +305,11 @@ export default function ChatScreen() {
               <TextInput
                 key={inputKey}
                 placeholder="メッセージを入力..."
-                placeholderTextColor="rgba(0,0,0,0.4)"
+                placeholderTextColor={colorScheme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
                 value={newMessage}
                 onChangeText={setNewMessage}
                 multiline
-                style={styles.textInput}
+                style={[styles.textInput, { color: theme.glassText }]}
                 editable={!isThinking}
               />
               <Pressable
@@ -324,17 +324,17 @@ export default function ChatScreen() {
                 {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
                   <GlassView style={styles.sendButtonGlass} isInteractive>
                     {isThinking ? (
-                      <ActivityIndicator size="small" color="#000000" />
+                      <ActivityIndicator size="small" color={theme.glassText} />
                     ) : (
-                      <Ionicons name="arrow-up" size={20} color="#000000" />
+                      <Ionicons name="arrow-up" size={20} color={theme.glassText} />
                     )}
                   </GlassView>
                 ) : (
                   <View style={styles.sendButtonFallback}>
                     {isThinking ? (
-                      <ActivityIndicator size="small" color="#000000" />
+                      <ActivityIndicator size="small" color={theme.glassText} />
                     ) : (
-                      <Ionicons name="arrow-up" size={20} color="#000000" />
+                      <Ionicons name="arrow-up" size={20} color={theme.glassText} />
                     )}
                   </View>
                 )}
@@ -499,7 +499,6 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    color: '#000000',
     maxHeight: 80, // 約3行分
     minHeight: 34,
     paddingTop: 8,

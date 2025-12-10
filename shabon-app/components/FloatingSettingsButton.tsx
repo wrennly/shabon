@@ -104,7 +104,7 @@ export function FloatingSettingsButton() {
       >
         {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
           <GlassView style={styles.glassContainer} isInteractive>
-            <Ionicons name="ellipsis-horizontal" size={24} color="#000000" />
+            <Ionicons name="ellipsis-horizontal" size={24} color={theme.glassText} />
           </GlassView>
         ) : (
           <View
@@ -171,10 +171,9 @@ export function FloatingSettingsButton() {
                           setTimeout(() => action.onPress(), 250);
                         }}
                       >
-                        <Text style={[
+                        <Text                         style={[
                           styles.menuText, 
-                          { color: '#000000' },
-                          action.isDestructive && { color: '#FF3B30' }
+                          { color: action.isDestructive ? '#FF3B30' : theme.glassText }
                         ]}>
                           {action.title}
                         </Text>

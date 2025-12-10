@@ -366,7 +366,7 @@ export default function MateBuilderScreen() {
                       <Text
                         style={[
                           styles.pillText,
-                          { color: selected ? '#000000' : '#8E8E93' },
+                          { color: selected ? theme.glassText : '#8E8E93' },
                         ]}
                       >
                         {opt.display_name}
@@ -562,11 +562,11 @@ export default function MateBuilderScreen() {
             {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
               <GlassView style={styles.craftButtonGlass} isInteractive>
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#000000" />
+                  <ActivityIndicator size="small" color={theme.glassText} />
                 ) : (
                   <>
-                    <Ionicons name="rocket-outline" size={22} color="#000000" />
-                    <Text style={styles.craftButtonText}>メイトクラフト</Text>
+                    <Ionicons name="rocket-outline" size={22} color={theme.glassText} />
+                    <Text style={[styles.craftButtonText, { color: theme.glassText }]}>メイトクラフト</Text>
                   </>
                 )}
               </GlassView>
@@ -602,31 +602,31 @@ export default function MateBuilderScreen() {
           <View style={styles.modalOverlay}>
             {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
               <GlassView style={styles.modalContentGlass}>
-                <Text style={[styles.modalTitle, { color: '#000000' }]}>
+                <Text style={[styles.modalTitle, { color: theme.glassText }]}>
                   公開に関する注意事項
                 </Text>
                 
-                <Text style={[styles.modalText, { color: '#000000' }]}>
+                <Text style={[styles.modalText, { color: theme.glassText }]}>
                   メイトを公開する前に、以下の内容を確認してください。
                 </Text>
-                
+
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
+                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
                     ⚠️ 二次創作について
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     既存のキャラクター（アニメ、漫画、ゲーム、小説など）を元にしたメイトの公開は、著作権法に違反する可能性があります。
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     二次創作メイトは「非公開」でのみご利用ください。
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
+                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
                     ✅ 公開できるメイト
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     • オリジナルキャラクター{'\n'}
                     • 自分で考えた設定のメイト{'\n'}
                     • 著作権を侵害しないメイト
@@ -634,10 +634,10 @@ export default function MateBuilderScreen() {
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
+                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
                     ❌ 公開できないメイト
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     • アニメ・漫画のキャラクター{'\n'}
                     • ゲームのキャラクター{'\n'}
                     • 実在の人物{'\n'}
@@ -656,7 +656,7 @@ export default function MateBuilderScreen() {
                       }, 200);
                     }}
                   >
-                    <Text style={[styles.modalButtonText, { color: '#000000' }]}>
+                    <Text style={[styles.modalButtonText, { color: theme.glassText }]}>
                       キャンセル
                     </Text>
                   </Pressable>
@@ -687,27 +687,27 @@ export default function MateBuilderScreen() {
                   公開に関する注意事項
                 </Text>
                 
-                <Text style={[styles.modalText, { color: '#000000' }]}>
+                <Text style={[styles.modalText, { color: theme.glassText }]}>
                   メイトを公開する前に、以下の内容を確認してください。
                 </Text>
                 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
+                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
                     ⚠️ 二次創作について
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     既存のキャラクター（アニメ、漫画、ゲーム、小説など）を元にしたメイトの公開は、著作権法に違反する可能性があります。
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     二次創作メイトは「非公開」でのみご利用ください。
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
+                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
                     ✅ 公開できるメイト
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     • オリジナルキャラクター{'\n'}
                     • 自分で考えた設定のメイト{'\n'}
                     • 著作権を侵害しないメイト
@@ -715,10 +715,10 @@ export default function MateBuilderScreen() {
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: '#000000' }]}>
+                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
                     ❌ 公開できないメイト
                   </Text>
-                  <Text style={[styles.modalSectionText, { color: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
                     • アニメ・漫画のキャラクター{'\n'}
                     • ゲームのキャラクター{'\n'}
                     • 実在の人物{'\n'}
@@ -736,7 +736,7 @@ export default function MateBuilderScreen() {
                       }, 200);
                     }}
                   >
-                    <Text style={[styles.modalButtonText, { color: '#000000' }]}>
+                    <Text style={[styles.modalButtonText, { color: theme.glassText }]}>
                       キャンセル
                     </Text>
                   </Pressable>
@@ -901,7 +901,6 @@ const styles = StyleSheet.create({
   craftButtonText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#000000',
   },
   // Modal styles
   modalOverlay: {

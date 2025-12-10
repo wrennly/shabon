@@ -155,8 +155,8 @@ export default function LoginScreen() {
           <Pressable onPress={handleAppleLogin} disabled={loading} style={styles.glassButtonWrapper}>
             {isLiquidGlassAvailable() ? (
               <GlassView style={styles.glassButton} isInteractive>
-                <Ionicons name="logo-apple" size={22} color="#000000" />
-                <Text style={styles.glassButtonText}>Appleで続行</Text>
+                <Ionicons name="logo-apple" size={22} color={theme.glassText} />
+                <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Appleで続行</Text>
               </GlassView>
             ) : (
               <View style={[styles.fallbackButton, { backgroundColor: '#000000' }]}>
@@ -171,13 +171,13 @@ export default function LoginScreen() {
         <Pressable onPress={handleGoogleLogin} disabled={!request || loading} style={styles.glassButtonWrapper}>
           {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
             <GlassView style={styles.glassButton} isInteractive>
-              <Ionicons name="logo-google" size={20} color="#000000" />
-              <Text style={styles.glassButtonText}>Googleで続行</Text>
+              <Ionicons name="logo-google" size={20} color={theme.glassText} />
+              <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Googleで続行</Text>
             </GlassView>
           ) : (
             <View style={[styles.fallbackButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-              <Ionicons name="logo-google" size={20} color="#000000" />
-              <Text style={[styles.glassButtonText, { color: '#000000' }]}>Googleで続行</Text>
+              <Ionicons name="logo-google" size={20} color={theme.glassText} />
+              <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Googleで続行</Text>
             </View>
           )}
         </Pressable>
@@ -259,7 +259,6 @@ const styles = StyleSheet.create({
   glassButtonText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#000000',
   },
   loadingOverlay: {
     position: 'absolute',
