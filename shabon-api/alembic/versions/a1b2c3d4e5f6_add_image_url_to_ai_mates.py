@@ -1,7 +1,7 @@
 """add_image_url_to_ai_mates
 
 Revision ID: a1b2c3d4e5f6
-Revises: 8ffd66a8d28f
+Revises: 2c52571f435c
 Create Date: 2025-12-10 12:00:00.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'a1b2c3d4e5f6'
-down_revision: Union[str, None] = '8ffd66a8d28f'
+down_revision: Union[str, None] = '2c52571f435c'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
