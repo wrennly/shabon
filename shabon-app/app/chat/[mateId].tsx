@@ -103,7 +103,7 @@ export default function ChatScreen() {
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, []);
+  }, [baseBottom]);
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -473,6 +473,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 16,
+    zIndex: 10,
   },
   inputGlassContainer: {
     flexDirection: 'row',
