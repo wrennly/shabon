@@ -121,7 +121,7 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
                 animatedStyle
             ]}>
                  {Platform.OS !== 'web' && (
-                     <Canvas style={StyleSheet.absoluteFill}>
+                     <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
                         <RoundedRect 
                             x={0} 
                             y={0} 

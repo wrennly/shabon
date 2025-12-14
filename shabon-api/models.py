@@ -188,14 +188,17 @@ class MateInfoResponse(SQLModel):
     mate_id: Optional[str] = None  # Search ID
     last_message: Optional[str] = None
     profile_preview: Optional[str] = None  # Brief profile
+    image_url: Optional[str] = None  # Mate image URL
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    last_chat_time: Optional[datetime] = None  # Latest chat timestamp
 
 class MateEditDetailResponse(SQLModel):
     mate_name: str
     mate_id: Optional[str] = None  # Unique mate ID
     base_prompt: Optional[str] = None  # User's raw prompt
     is_public: bool
+    image_url: Optional[str] = None  # Mate image URL
     settings: List[SettingInput]
 class UserProfileUpdateRequest(SQLModel):
     """Request to update user profile"""

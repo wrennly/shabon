@@ -234,30 +234,34 @@ def get_my_mates(
         )
     
     elif filter_type == 'chatted_only':
-        # Get mates user has chatted with
-        chatted_mate_ids = session.exec(
-            select(ChatHistory.mate_id)
+        # Get mates user has chatted with, ordered by latest chat timestamp
+        # Subquery to get the latest chat timestamp for each mate
+        latest_chat_subquery = (
+            select(
+                ChatHistory.mate_id,
+                func.max(ChatHistory.created_at).label('latest_chat_time')
+            )
             .where(ChatHistory.user_id == current_user.id)
-            .distinct()
-        ).all()
+            .group_by(ChatHistory.mate_id)
+            .subquery()
+        )
         
-        print(f"🔍 DEBUG: User {current_user.id} querying chatted_mate_ids...")
-        print(f"   Raw SQL result: {list(chatted_mate_ids)}")
-        print(f"   Total: {len(chatted_mate_ids)}")
-        
-        # If no chats found, return empty
-        if not chatted_mate_ids:
-            print(f"   ⚠️  No chats found for user {current_user.id}")
-            return []
-        
+        # Join with AiMates and order by latest chat time
+        # Include both owned mates and public mates
         statement = (
             select(AiMates)
+            .join(latest_chat_subquery, AiMates.id == latest_chat_subquery.c.mate_id)
             .where(
-                AiMates.id.in_(chatted_mate_ids),
-                AiMates.is_deleted == False
+                AiMates.is_deleted == False,
+                or_(
+                    AiMates.user_id == current_user.id,
+                    AiMates.is_public == True
+                )
             )
-            .order_by(AiMates.id.desc())
+            .order_by(latest_chat_subquery.c.latest_chat_time.desc())
         )
+        
+        print(f"🔍 DEBUG: User {current_user.id} querying chatted mates (ordered by latest chat)...")
     
     else:
         # Get both created and chatted mates
@@ -289,6 +293,7 @@ def get_my_mates(
     # Get latest chat for each mate in a single query (not N+1)
     mate_ids = [m.id for m in mates]
     latest_chats = {}
+    latest_chat_times = {}
     if mate_ids:
         subquery = (
             select(
@@ -310,6 +315,7 @@ def get_my_mates(
         
         for chat in latest:
             latest_chats[chat.mate_id] = chat.message_text
+            latest_chat_times[chat.mate_id] = chat.created_at
     
     # Build response
     response_list = [
@@ -319,10 +325,16 @@ def get_my_mates(
             mate_id=mate.mate_id,
             created_at=mate.created_at,
             updated_at=mate.updated_at,
-            last_message=latest_chats.get(mate.id)
+            last_message=latest_chats.get(mate.id),
+            last_chat_time=latest_chat_times.get(mate.id),
+            image_url=mate.image_url
         )
         for mate in mates
     ]
+    
+    # Sort by last_chat_time if chatted_only filter is used
+    if filter_type == 'chatted_only':
+        response_list.sort(key=lambda x: x.last_chat_time or datetime.min, reverse=True)
     
     return response_list
 
@@ -347,7 +359,8 @@ def get_public_mates(
                 mate_id=item["mate_id"],
                 created_at=item.get("created_at"),
                 updated_at=item.get("updated_at"),
-                profile_preview=item.get("profile_preview")
+                profile_preview=item.get("profile_preview"),
+                image_url=item.get("image_url")
             )
             for item in cached_result
         ]
@@ -411,7 +424,8 @@ def get_public_mates(
                 mate_id=mate.mate_id,
                 created_at=mate.created_at,
                 updated_at=mate.updated_at,
-                profile_preview=profile_preview
+                profile_preview=profile_preview,
+                image_url=mate.image_url
             )
         )
     
@@ -423,7 +437,8 @@ def get_public_mates(
             "mate_id": item.mate_id,
             "created_at": item.created_at.isoformat() if item.created_at else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
-            "profile_preview": item.profile_preview
+            "profile_preview": item.profile_preview,
+            "image_url": item.image_url
         }
         for item in response_list
     ]
@@ -477,6 +492,7 @@ def get_mate_details(
         mate_id=mate.mate_id,
         base_prompt=mate.base_prompt,
         is_public=mate.is_public,
+        image_url=mate.image_url,
         settings=settings_payload
     )
 
@@ -505,6 +521,7 @@ def get_public_character_details(
     return {
         "mate_name": mate.mate_name,
         "is_public": mate.is_public,
+        "image_url": mate.image_url,
         "id": mate.id
     }
 

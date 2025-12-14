@@ -19,6 +19,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
+import { PublicSettingsModal } from '@/components/PublicSettingsModal';
 
 interface AttributeOption {
   value: string;
@@ -126,20 +127,21 @@ export default function MateBuilderScreen() {
 
   const loadSchema = async () => {
     try {
-      // キャッシュがあればそれを使う
+      // キャッシュがあればそれを使う（ローディングなし）
       if (cachedSchema) {
         setSchema(cachedSchema);
         setLoading(false);
         return;
       }
       
+      // キャッシュがない場合のみローディング表示
       setLoading(true);
       const response = await apiClient.get('/settings/schema');
       const sortedAttributes = response.data.attributes.sort(
         (a: SchemaAttribute, b: SchemaAttribute) => a.display_order - b.display_order
       );
       
-      // キャッシュに保存
+      // キャッシュに保存（永続的にキャッシュ）
       cachedSchema = sortedAttributes;
       setSchema(sortedAttributes);
     } catch (error: any) {
@@ -502,7 +504,12 @@ export default function MateBuilderScreen() {
             <ShabonInput
               label="メイト名 *"
               value={mateName}
-              onChangeText={setMateName}
+              onChangeText={(text) => {
+                setMateName(text);
+                if (text.trim()) {
+                  setSubmitMessage('');
+                }
+              }}
               placeholder="メイトの名前"
             />
           </View>
@@ -544,31 +551,35 @@ export default function MateBuilderScreen() {
             公開すると他のユーザーもこのメイトとチャットできます
           </Text>
 
-          {/* エラーメッセージ */}
-          {submitMessage ? (
-            <Text style={styles.errorText}>
-              {submitMessage}
-            </Text>
-          ) : null}
-
           {/* Padding for floating button */}
           <View style={{ height: 80 }} />
           </View>
         </ScrollView>
+
+        {/* エラーメッセージ（ボタンの上） */}
+        {submitMessage ? (
+          <View style={styles.errorMessageContainer}>
+            <Text style={styles.errorText}>
+              {submitMessage}
+            </Text>
+          </View>
+        ) : null}
 
         {/* メイト作成ボタン（画面下部中央の横長ガラスボタン） */}
         <View style={styles.floatingButtonContainer}>
           <Pressable onPress={handleSubmit} disabled={isSubmitting || !!mateIdError}>
             {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
               <GlassView style={styles.craftButtonGlass} isInteractive>
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color={theme.glassText} />
-                ) : (
-                  <>
-                    <Ionicons name="rocket-outline" size={22} color={theme.glassText} />
-                    <Text style={[styles.craftButtonText, { color: theme.glassText }]}>メイトクラフト</Text>
-                  </>
-                )}
+                <View style={[styles.craftButtonColorOverlay, { backgroundColor: isDark ? 'rgba(90, 200, 250, 0.25)' : 'rgba(0, 122, 255, 0.25)' }]}>
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color={isDark ? '#FFFFFF' : '#000000'} />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+                      <Text style={[styles.craftButtonText, { color: isDark ? '#FFFFFF' : '#000000' }]}>メイト追加</Text>
+                    </>
+                  )}
+                </View>
               </GlassView>
             ) : (
               <BlurView
@@ -576,15 +587,15 @@ export default function MateBuilderScreen() {
                 tint={isDark ? 'dark' : 'light'}
                 style={[
                   styles.floatingBlurBar,
-                  { backgroundColor: isDark ? 'rgba(44,44,46,0.45)' : 'rgba(255,255,255,0.25)' },
+                  { backgroundColor: isDark ? 'rgba(90, 200, 250, 0.25)' : 'rgba(0, 122, 255, 0.25)' },
                 ]}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color={theme.tint} />
+                  <ActivityIndicator size="small" color={isDark ? '#FFFFFF' : '#000000'} />
                 ) : (
                   <>
-                    <Ionicons name="rocket-outline" size={22} color={theme.tint} />
-                    <Text style={[styles.craftButtonText, { color: theme.tint }]}>メイトクラフト</Text>
+                    <Ionicons name="add" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+                    <Text style={[styles.craftButtonText, { color: isDark ? '#FFFFFF' : '#000000' }]}>メイト追加</Text>
                   </>
                 )}
               </BlurView>
@@ -592,171 +603,20 @@ export default function MateBuilderScreen() {
           </Pressable>
         </View>
 
-        {/* 二次創作禁止同意モーダル */}
-        <Modal
+        {/* 公開設定モーダル */}
+        <PublicSettingsModal
           visible={showDerivativeModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowDerivativeModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
-              <GlassView style={styles.modalContentGlass}>
-                <Text style={[styles.modalTitle, { color: theme.glassText }]}>
-                  公開に関する注意事項
-                </Text>
-                
-                <Text style={[styles.modalText, { color: theme.glassText }]}>
-                  メイトを公開する前に、以下の内容を確認してください。
-                </Text>
-
-                <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
-                    ⚠️ 二次創作について
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    既存のキャラクター（アニメ、漫画、ゲーム、小説など）を元にしたメイトの公開は、著作権法に違反する可能性があります。
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    二次創作メイトは「非公開」でのみご利用ください。
-                  </Text>
-                </View>
-
-                <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
-                    ✅ 公開できるメイト
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    • オリジナルキャラクター{'\n'}
-                    • 自分で考えた設定のメイト{'\n'}
-                    • 著作権を侵害しないメイト
-                  </Text>
-                </View>
-
-                <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
-                    ❌ 公開できないメイト
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    • アニメ・漫画のキャラクター{'\n'}
-                    • ゲームのキャラクター{'\n'}
-                    • 実在の人物{'\n'}
-                    • その他、著作権を侵害するもの
-                  </Text>
-                </View>
-
-                <View style={styles.modalButtons}>
-                  <Pressable
-                    style={[styles.modalButton, styles.modalButtonCancelSimple]}
-                    onPress={() => {
-                      // モーダルを閉じてからトグルを戻す
-                      setShowDerivativeModal(false);
-                      setTimeout(() => {
-                        setIsPublic(false);
-                      }, 200);
-                    }}
-                  >
-                    <Text style={[styles.modalButtonText, { color: theme.glassText }]}>
-                      キャンセル
-                    </Text>
-                  </Pressable>
-                  
-                  <Pressable
-                    style={[styles.modalButton, styles.modalButtonAgree]}
-                    onPress={() => {
-                      setAgreedToDerivative(true);
-                      setShowDerivativeModal(false);
-                    }}
-                  >
-                    <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                      同意して公開
-                    </Text>
-                  </Pressable>
-                </View>
-              </GlassView>
-            ) : (
-              <BlurView
-                intensity={80}
-                tint="light"
-                style={[
-                  styles.modalContentGlass,
-                  { backgroundColor: 'rgba(255, 255, 255, 0.15)' }
-                ]}
-              >
-                <Text style={[styles.modalTitle, { color: '#000000' }]}>
-                  公開に関する注意事項
-                </Text>
-                
-                <Text style={[styles.modalText, { color: theme.glassText }]}>
-                  メイトを公開する前に、以下の内容を確認してください。
-                </Text>
-                
-                <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
-                    ⚠️ 二次創作について
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    既存のキャラクター（アニメ、漫画、ゲーム、小説など）を元にしたメイトの公開は、著作権法に違反する可能性があります。
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    二次創作メイトは「非公開」でのみご利用ください。
-                  </Text>
-                </View>
-
-                <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
-                    ✅ 公開できるメイト
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    • オリジナルキャラクター{'\n'}
-                    • 自分で考えた設定のメイト{'\n'}
-                    • 著作権を侵害しないメイト
-                  </Text>
-                </View>
-
-                <View style={styles.modalSection}>
-                  <Text style={[styles.modalSectionTitle, { color: theme.glassText }]}>
-                    ❌ 公開できないメイト
-                  </Text>
-                  <Text style={[styles.modalSectionText, { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }]}>
-                    • アニメ・漫画のキャラクター{'\n'}
-                    • ゲームのキャラクター{'\n'}
-                    • 実在の人物{'\n'}
-                    • その他、著作権を侵害するもの
-                  </Text>
-                </View>
-
-                <View style={styles.modalButtons}>
-                  <Pressable
-                    style={[styles.modalButton, styles.modalButtonCancelSimple]}
-                    onPress={() => {
-                      setShowDerivativeModal(false);
-                      setTimeout(() => {
-                        setIsPublic(false);
-                      }, 200);
-                    }}
-                  >
-                    <Text style={[styles.modalButtonText, { color: theme.glassText }]}>
-                      キャンセル
-                    </Text>
-                  </Pressable>
-                  
-                  <Pressable
-                    style={[styles.modalButton, styles.modalButtonAgree]}
-                    onPress={() => {
-                      setAgreedToDerivative(true);
-                      setShowDerivativeModal(false);
-                    }}
-                  >
-                    <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                      同意して公開
-                    </Text>
-                  </Pressable>
-                </View>
-              </BlurView>
-            )}
-          </View>
-        </Modal>
+          onCancel={() => {
+            setShowDerivativeModal(false);
+            setTimeout(() => {
+              setIsPublic(false);
+            }, 200);
+          }}
+          onAgree={() => {
+            setAgreedToDerivative(true);
+            setShowDerivativeModal(false);
+          }}
+        />
       </KeyboardAvoidingView>
       )}
     </View>
@@ -837,9 +697,16 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
+  errorMessageContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 195 : 151,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
   errorText: {
     color: '#FF3B30',
-    marginTop: 16,
     textAlign: 'center',
     fontSize: 14,
   },
@@ -893,14 +760,26 @@ const styles = StyleSheet.create({
     width: 280,
     height: 44,
     borderRadius: 22,
+    overflow: 'hidden',
+  },
+  craftButtonColorOverlay: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 10,
+    borderRadius: 22,
+  },
+  addIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   craftButtonText: {
     fontSize: 17,
-    fontWeight: '600',
   },
   // Modal styles
   modalOverlay: {
@@ -1015,8 +894,11 @@ const styles = StyleSheet.create({
   },
   deleteImageButton: {
     marginTop: 12,
-    padding: 8,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

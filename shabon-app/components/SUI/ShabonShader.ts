@@ -55,12 +55,12 @@ vec3 paletteLight(float t) {
     return a + b * cos(6.28318 * (c * t + d));
 }
 
-// More vibrant, neon-like palette for Dark Mode
+// Soft, dreamy palette for Dark Mode
 vec3 paletteDark(float t) {
-    // Reduced saturation for a more elegant look
-    // Gentler, less glaring palette
-    vec3 a = vec3(0.35, 0.35, 0.45); // Darker base
-    vec3 b = vec3(0.2, 0.2, 0.25);   // Reduced saturation/contrast
+    // Much softer, pastel-like colors for dark mode
+    // Inspired by aurora and night sky
+    vec3 a = vec3(0.5, 0.5, 0.6);   // Lighter base (more visible)
+    vec3 b = vec3(0.15, 0.15, 0.2); // Very low saturation (soft)
     vec3 c = vec3(1.0, 1.0, 1.0);
     vec3 d = vec3(0.263, 0.416, 0.557);
     return a + b * cos(6.28318 * (c * t + d));

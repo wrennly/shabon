@@ -89,7 +89,7 @@ export function FloatingSettingsButton() {
   };
 
   const menuActions = [
-    { title: 'マイメイト', onPress: () => router.push('/(tabs)/chat') },
+    { title: 'マイメイト', onPress: () => router.push('/my-mates') },
     { title: 'プロフィール', onPress: () => router.push('/profile') },
     { title: 'フィードバック', onPress: handleFeedback },
     { title: 'ログアウト', onPress: handleLogout, isDestructive: true },
@@ -151,27 +151,32 @@ export function FloatingSettingsButton() {
           {/* 文字のフェード用ラッパー */}
           <Animated.View style={{ opacity: fadeAnim }}>
             {Platform.OS === 'ios' ? (
-              <View style={styles.popoverBlurWrapper}>
+              <View style={[
+                styles.popoverBlurWrapper,
+                { 
+                  borderWidth: 1,
+                  borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)'
+                }
+              ]}>
                 <BlurView 
                   intensity={80} 
-                  tint="light"
+                  tint={colorScheme === 'dark' ? 'dark' : 'light'}
                   style={styles.popoverBlur}
                 >
-                  <View style={styles.popoverBlurContent}>
-                    {/* 左上のハイライト */}
-                    <View style={styles.highlightTopLeft} />
-                    {/* 右下のハイライト */}
-                    <View style={styles.highlightBottomRight} />
+                  <View style={[
+                    styles.popoverBlurContent,
+                    { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)' }
+                  ]}>
                     {menuActions.filter(a => !a.isCancel).map((action, index) => (
                       <TouchableOpacity
                         key={index}
-                        style={[styles.menuItemGlass, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.08)' }]}
+                        style={[styles.menuItemGlass, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}
                         onPress={() => {
                           closeMenu();
                           setTimeout(() => action.onPress(), 250);
                         }}
                       >
-                        <Text                         style={[
+                        <Text style={[
                           styles.menuText, 
                           { color: action.isDestructive ? '#FF3B30' : theme.glassText }
                         ]}>
@@ -275,6 +280,22 @@ const styles = StyleSheet.create({
     elevation: 8,
     overflow: 'hidden',
   },
+  popoverGlassWrapper: {
+    width: 200,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+  },
+  popoverGlass: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  popoverGlassContent: {
+    paddingVertical: 8,
+  },
   popoverBlurWrapper: {
     width: 200,
     borderRadius: 24,
@@ -283,42 +304,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
-    // 薄い枠線
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   popoverBlur: {
     borderRadius: 24,
     overflow: 'hidden',
   },
   popoverBlurContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingVertical: 8,
-    position: 'relative',
-  },
-  highlightTopLeft: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 100,
-    height: 50,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 24,
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-  },
-  highlightBottomRight: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 80,
-    height: 40,
-    backgroundColor: 'transparent',
-    borderBottomRightRadius: 24,
-    borderBottomWidth: 1,
-    borderRightWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
   },
   menuItem: {
     paddingVertical: 12,

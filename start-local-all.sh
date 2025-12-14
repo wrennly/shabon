@@ -20,7 +20,7 @@ echo "🎨 (4/4) EXPOを起動します..."
 cd ../shabon-app
 # --tunnel は ngrok のエラーが出やすいので、ローカル開発では外します
 # スマホ実機で確認したい場合は --tunnel をつけてください
-npx expo start --tunnel --web
+npx expo start
 
 # ---
 # React (npm start) を Ctrl+C で終了したときに、

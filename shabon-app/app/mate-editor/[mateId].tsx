@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Text, TouchableOpacity, ActivityIndicator, Pressable, Modal, Image } from 'react-native';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '@/services/api';
 import { ShabonInput } from '@/components/SUI/ShabonInput';
 import { ShabonButton } from '@/components/SUI/ShabonButton';
 import { ShabonSwitch } from '@/components/SUI/ShabonSwitch';
 import { ShabonSelect } from '@/components/SUI/ShabonSelect';
+import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { BackButton } from '@/components/BackButton';
+import { PublicSettingsModal } from '@/components/PublicSettingsModal';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 interface AttributeOption {
   value: string;
@@ -34,11 +42,14 @@ interface MateDetails {
   mate_id: string;
   is_public: boolean;
   settings: Array<{ key: string; value: string }>;
+  image_url?: string;
 }
 
 export default function MateEditorScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const { mateId: paramMateId } = useLocalSearchParams<{ mateId: string }>();
   
   const [schema, setSchema] = useState<SchemaAttribute[]>([]);
@@ -52,6 +63,10 @@ export default function MateEditorScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [showDerivativeModal, setShowDerivativeModal] = useState(false);
+  const [agreedToDerivative, setAgreedToDerivative] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
   
   useEffect(() => {
     loadSchema();
@@ -116,6 +131,11 @@ export default function MateEditorScreen() {
       setMateId(details.mate_id || '');
       setOriginalMateId(details.mate_id || '');
       setIsPublic(details.is_public);
+      
+      // Load image if exists
+      if (details.image_url) {
+        setImageUri(details.image_url);
+      }
     } catch (error) {
       console.error('Failed to load mate details:', error);
       setSubmitMessage('メイト情報の読み込みに失敗しました');
@@ -126,6 +146,116 @@ export default function MateEditorScreen() {
 
   const handleInputChange = (key: string, value: string) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const optimizeImage = async (uri: string): Promise<string> => {
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 512, height: 512 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.error('Image optimization failed:', error);
+      return uri;
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('権限が必要です', 'ギャラリーへのアクセス権限を許可してください');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      exif: false,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const optimizedUri = await optimizeImage(result.assets[0].uri);
+      setImageUri(optimizedUri);
+      
+      // Upload immediately if mate exists
+      if (paramMateId) {
+        await uploadImage(optimizedUri, Number(paramMateId));
+      }
+    }
+  };
+
+  const uploadImage = async (uri: string, mateId: number) => {
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'image.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+        name: filename,
+        type,
+      } as any);
+
+      const response = await apiClient.post(`/mates/${mateId}/image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.image_url) {
+        setImageUri(response.data.image_url);
+      }
+    } catch (error: any) {
+      console.error('Image upload failed:', error);
+      Alert.alert('エラー', '画像のアップロードに失敗しました');
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const deleteImage = async () => {
+    if (!paramMateId) return;
+
+    Alert.alert(
+      '画像を削除',
+      '本当に画像を削除しますか？',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.delete(`/mates/${paramMateId}/image`);
+              setImageUri(null);
+              Alert.alert('成功', '画像を削除しました');
+            } catch (error: any) {
+              console.error('Image deletion failed:', error);
+              Alert.alert('エラー', '画像の削除に失敗しました');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handlePublicToggle = (value: boolean) => {
+    if (value && !agreedToDerivative) {
+      // 公開ONにする場合、モーダルを表示
+      setIsPublic(true);
+      setTimeout(() => {
+        setShowDerivativeModal(true);
+      }, 300);
+    } else {
+      // 公開OFFにする場合、または既に同意済みの場合
+      setIsPublic(value);
+    }
   };
 
   const handleSubmit = async () => {
@@ -199,6 +329,55 @@ export default function MateEditorScreen() {
     const value = formState[attr.key] || '';
 
     if (attr.type === 'select' && attr.options) {
+      // 6個以下ならスライド式（pill）、7個以上ならリストボックス
+      if (attr.options.length <= 6) {
+        return (
+          <View key={attr.key} style={styles.pillSection}>
+            <Text style={[styles.pillLabel, { color: theme.text }]}>{attr.display_name}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.pillScrollContent}
+            >
+              {attr.options.map((opt) => {
+                const selected = value === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    activeOpacity={0.9}
+                    onPress={() => {
+                      // 選択済みなら解除、未選択なら選択
+                      if (selected) {
+                        handleInputChange(attr.key, '');
+                      } else {
+                        handleInputChange(attr.key, opt.value);
+                      }
+                    }}
+                    style={{ marginRight: 12 }}
+                  >
+                    <View
+                      style={[
+                        styles.pill,
+                        selected && styles.pillSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.pillText,
+                          { color: selected ? '#000000' : '#8E8E93' },
+                        ]}
+                      >
+                        {opt.display_name}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        );
+      }
+
       return (
         <ShabonSelect
           key={attr.key}
@@ -237,10 +416,14 @@ export default function MateEditorScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.tint} />
-        <Text style={[styles.loadingText, { color: theme.text }]}>読み込み中...</Text>
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+          <ShabonBackground />
+          <ActivityIndicator size="large" color={theme.tint} />
+          <Text style={[styles.loadingText, { color: theme.text }]}>読み込み中...</Text>
+        </View>
+      </>
     );
   }
 
@@ -248,91 +431,208 @@ export default function MateEditorScreen() {
   const advancedSettings = schema.filter((attr) => attr.display_order >= 5);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={theme.tint} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>メイトを編集</Text>
-        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-          <Ionicons name="trash-outline" size={24} color="#FF3B30" />
-        </TouchableOpacity>
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.inputContainer}>
-            <ShabonInput
-              label="メイト名 *"
-              value={mateName}
-              onChangeText={setMateName}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <View>
-              <ShabonInput
-                label="メイトID *"
-                value={mateId}
-                onChangeText={setMateId}
-                editable={!mateIdChecking}
-              />
-              {mateIdChecking && (
-                <View style={styles.loadingIcon}>
-                  <ActivityIndicator size="small" color={theme.tint} />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
+        <ShabonBackground />
+        
+        {/* ヘッダー */}
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+          <BackButton onPress={() => router.back()} />
+          <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName || 'メイトを編集'}</Text>
+          <TouchableOpacity onPress={handleDelete} style={styles.deleteButtonContainer}>
+            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+              <GlassView style={styles.deleteButtonGlass} isInteractive>
+                <View style={styles.deleteButtonInner}>
+                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </View>
+              </GlassView>
+            ) : (
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 28 : 18}
+                tint={isDark ? 'dark' : 'light'}
+                style={[
+                  styles.deleteButtonBlur,
+                  {
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                  },
+                ]}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              </BlurView>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.content}
+        >
+          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 20 }]}>
+            {/* 画像セクション */}
+            <View style={styles.imageSection}>
+              {imageUri ? (
+                <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+                  <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                  <View style={styles.imageEditOverlay}>
+                    <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  onPress={pickImage} 
+                  style={styles.imageContainer}
+                  disabled={imageUploading}
+                >
+                  {imageUploading ? (
+                    <View style={styles.imagePreview}>
+                      <ActivityIndicator size="large" color={theme.tint} />
+                    </View>
+                  ) : (
+                    <View style={styles.imagePreview}>
+                      <Ionicons name="person" size={40} color={theme.icon} />
+                    </View>
+                  )}
+                  <View style={styles.imageEditOverlay}>
+                    <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+              )}
+              {imageUri && (
+                <TouchableOpacity onPress={deleteImage} style={styles.deleteImageButton}>
+                  <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                </TouchableOpacity>
               )}
             </View>
-            {mateIdError ? (
-              <Text style={[styles.helperText, { color: '#FF3B30' }]}>{mateIdError}</Text>
-            ) : mateId && mateId !== originalMateId ? (
-              <Text style={[styles.helperText, { color: '#34C759' }]}>このIDは利用可能です</Text>
-            ) : null}
-          </View>
 
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            基本設定
-          </Text>
-          {basicSettings.map((attr) => renderInput(attr))}
+            {/* メイトID */}
+            <View style={styles.inputContainer}>
+              <View>
+                <ShabonInput
+                  label="メイトID *"
+                  value={mateId}
+                  onChangeText={setMateId}
+                  editable={!mateIdChecking}
+                />
+                {mateIdChecking && (
+                  <View style={styles.loadingIcon}>
+                    <ActivityIndicator size="small" color={theme.tint} />
+                  </View>
+                )}
+              </View>
+              {mateIdError ? (
+                <Text style={[styles.helperText, { color: '#FF3B30' }]}>{mateIdError}</Text>
+              ) : mateId && mateId !== originalMateId ? (
+                <Text style={[styles.helperText, { color: '#34C759' }]}>このIDは利用可能です</Text>
+              ) : null}
+            </View>
 
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            {/* メイト名 */}
+            <View style={styles.inputContainer}>
+              <ShabonInput
+                label="メイト名 *"
+                value={mateName}
+                onChangeText={(text) => {
+                  setMateName(text);
+                  if (text.trim()) {
+                    setSubmitMessage('');
+                  }
+                }}
+              />
+            </View>
 
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            詳細設定
-          </Text>
-          {advancedSettings.map((attr) => renderInput(attr))}
+            {/* 基本設定 */}
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              基本設定
+            </Text>
+            {basicSettings.map((attr) => renderInput(attr))}
 
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            {/* 詳細設定 */}
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              詳細設定
+            </Text>
+            {advancedSettings.map((attr) => renderInput(attr))}
 
-          <View style={styles.switchContainer}>
-            <Text style={[styles.switchLabel, { color: theme.text }]}>公開設定</Text>
-            <ShabonSwitch value={isPublic} onValueChange={setIsPublic} />
-          </View>
-          <Text style={[styles.helperText, { color: theme.icon }]}>
-            公開すると他のユーザーもこのメイトとチャットできます
-          </Text>
+            {/* 公開設定 */}
+            <View style={styles.publicSection}>
+              <View style={styles.switchContainer}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>公開</Text>
+                <ShabonSwitch value={isPublic} onValueChange={handlePublicToggle} />
+              </View>
+              <Text style={[styles.helperText, { color: theme.icon }]}>
+                公開すると他のユーザーもこのメイトとチャットできます
+              </Text>
+            </View>
 
-          {submitMessage ? (
+            {/* Padding for floating button */}
+            <View style={{ height: 80 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* エラーメッセージ（ボタンの上） */}
+        {submitMessage ? (
+          <View style={styles.errorMessageContainer}>
             <Text style={styles.errorText}>
               {submitMessage}
             </Text>
-          ) : null}
-
-          <View style={styles.submitButtonContainer}>
-            <ShabonButton
-              title="更新する"
-              onPress={handleSubmit}
-              loading={isSubmitting}
-              disabled={isSubmitting || !!mateIdError}
-              variant="primary"
-            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+        ) : null}
+
+        {/* 更新ボタン（画面下部中央） */}
+        <View style={styles.floatingButtonContainer}>
+          <Pressable onPress={handleSubmit} disabled={isSubmitting || !!mateIdError}>
+            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+              <GlassView style={styles.updateButtonGlass} isInteractive>
+                <View style={[styles.updateButtonColorOverlay, { backgroundColor: isDark ? 'rgba(90, 200, 250, 0.25)' : 'rgba(0, 122, 255, 0.25)' }]}>
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color={isDark ? '#FFFFFF' : '#000000'} />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+                      <Text style={[styles.updateButtonText, { color: isDark ? '#FFFFFF' : '#000000' }]}>更新</Text>
+                    </>
+                  )}
+                </View>
+              </GlassView>
+            ) : (
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 28 : 18}
+                tint={isDark ? 'dark' : 'light'}
+                style={[
+                  styles.updateButtonBlur,
+                  { backgroundColor: isDark ? 'rgba(90, 200, 250, 0.25)' : 'rgba(0, 122, 255, 0.25)' },
+                ]}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+                    <Text style={[styles.updateButtonText, { color: '#FFFFFF' }]}>更新</Text>
+                  </>
+                )}
+              </BlurView>
+            )}
+          </Pressable>
+        </View>
+
+        {/* 公開設定モーダル */}
+        <PublicSettingsModal
+          visible={showDerivativeModal}
+          onCancel={() => {
+            setShowDerivativeModal(false);
+            setTimeout(() => {
+              setIsPublic(false);
+            }, 200);
+          }}
+          onAgree={() => {
+            setAgreedToDerivative(true);
+            setShowDerivativeModal(false);
+          }}
+        />
+      </View>
+    </>
   );
 }
 
@@ -349,26 +649,42 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    height: Platform.OS === 'ios' ? 44 + 48 : 56,
-    paddingTop: Platform.OS === 'ios' ? 48 : 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 8,
-    width: 44,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
-  deleteButton: {
-    padding: 8,
+  deleteButtonContainer: {
     width: 44,
-    alignItems: 'flex-end',
+    height: 44,
+  },
+  deleteButtonGlass: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  deleteButtonBlur: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  deleteButtonInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -376,6 +692,45 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
+  },
+  // Image section styles
+  imageSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  imageContainer: {
+    position: 'relative',
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imageEditOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  deleteImageButton: {
+    marginTop: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   inputContainer: {
     marginBottom: 16,
@@ -400,9 +755,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
-  divider: {
-    height: 1,
-    marginVertical: 24,
+  publicSection: {
+    marginTop: 24,
   },
   switchContainer: {
     flexDirection: 'row',
@@ -414,14 +768,81 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 17,
   },
-  submitButtonContainer: {
-    marginTop: 24,
-    marginBottom: 32,
+  // Pill styles (for 6 or fewer options)
+  pillSection: {
+    marginBottom: 16,
+  },
+  pillLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  pillScrollContent: {
+    paddingRight: 16,
+  },
+  pill: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  pillSelected: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    borderWidth: 1.5,
+    borderColor: '#5AC8FA',
+  },
+  pillText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Floating button styles
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 30 : 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  updateButtonGlass: {
+    width: 280,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  updateButtonBlur: {
+    width: 280,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  updateButtonColorOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  updateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorMessageContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 150 : 130,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 5,
   },
   errorText: {
     color: '#FF3B30',
-    marginTop: 16,
     textAlign: 'center',
     fontSize: 14,
+    fontWeight: '500',
   },
 });

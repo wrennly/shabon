@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ActivityIndicator, Pressable, TextInput, Keyboard, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ActivityIndicator, Pressable, TextInput, Keyboard, Animated, Dimensions, Image, Modal } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '@/services/api';
@@ -7,6 +7,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { BlurView } from 'expo-blur';
+import { BackButton } from '@/components/BackButton';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -27,11 +29,13 @@ export default function ChatScreen() {
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [mateName, setMateName] = useState('...');
+  const [mateImageUrl, setMateImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   const lastSentMessageRef = useRef<string>('');
   const [inputKey, setInputKey] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   
   // 入力欄のアニメーション
   const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -106,11 +110,70 @@ export default function ChatScreen() {
   }, [baseBottom]);
 
   const handleBack = () => {
-    if (navigation.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(tabs)/chat');
+    // 常にチャット一覧に戻る
+    router.replace('/(tabs)/chat');
+  };
+
+  const handleReportButtonPress = () => {
+    setShowReportModal(true);
+  };
+
+  const handleReportConfirm = async () => {
+    setShowReportModal(false);
+    
+    try {
+      // 直近10件の会話を取得
+      const recentMessages = history.slice(-10).map((msg, index) => ({
+        role: msg.role,
+        text: msg.text.substring(0, 200) // 最大200文字に制限
+      }));
+
+      // Discord Webhookに送信
+      const webhookUrl = 'https://discord.com/api/webhooks/1449759517007941673/Jtj6lzs7jmgzqvRBXIztddQoUoHgVle4nf6HAd9HBYbihr3s74wTppvvZo4bfEvHxVdH';
+      
+      const payload = {
+        embeds: [{
+          title: '🚨 迷惑レポート',
+          color: 0xFF3B30,
+          fields: [
+            {
+              name: 'メイトID',
+              value: mateId || 'unknown',
+              inline: true
+            },
+            {
+              name: 'メイト名',
+              value: mateName,
+              inline: true
+            },
+            {
+              name: '直近の会話',
+              value: recentMessages.map((msg, i) => 
+                `**${msg.role === 'user' ? 'ユーザー' : 'メイト'}**: ${msg.text}`
+              ).join('\n\n') || '会話履歴なし'
+            }
+          ],
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      alert('レポートを送信しました。ご協力ありがとうございます。');
+    } catch (error) {
+      console.error('Failed to send report:', error);
+      alert('レポートの送信に失敗しました。');
     }
+  };
+
+  const handleReportCancel = () => {
+    setShowReportModal(false);
   };
 
   const formatMessageSegments = (text: string): { text: string; bold?: boolean }[] => {
@@ -138,14 +201,19 @@ export default function ChatScreen() {
     try {
       setLoading(true);
       
-      // Load mate details
-      const mateResponse = await apiClient.get(`/mates/${mateId}/details`).catch(() =>
-        apiClient.get(`/mates/public-details/${mateId}`)
-      );
+      // Load mate details and chat history in parallel for faster loading
+      const [mateResponse, historyResponse] = await Promise.all([
+        apiClient.get(`/mates/${mateId}/details`).catch(() =>
+          apiClient.get(`/mates/public-details/${mateId}`)
+        ),
+        apiClient.get(`/chat/history/${mateId}`)
+      ]);
+      
+      // Set mate details
       setMateName(mateResponse.data.mate_name || 'Unknown');
+      setMateImageUrl(mateResponse.data.image_url || null);
 
-      // Load chat history
-      const historyResponse = await apiClient.get(`/chat/history/${mateId}`);
+      // Set chat history
       const formattedHistory = historyResponse.data.map((log: ChatHistoryEntry) => ({
         role: log.role === 'user' ? 'user' : 'model',
         text: log.message_text,
@@ -211,6 +279,10 @@ export default function ChatScreen() {
         style={[
           styles.bubble,
           item.role === 'user' ? styles.userBubble : styles.modelBubble,
+          // ダークモードでAI側の枠を消す
+          item.role === 'model' && colorScheme === 'dark' && {
+            borderWidth: 0,
+          }
         ]}
       >
         <Text
@@ -255,19 +327,42 @@ export default function ChatScreen() {
       
       {/* ヘッダー */}
       <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButtonContainer}>
-            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
-              <GlassView style={styles.backButtonGlass} isInteractive>
-                <Ionicons name="chevron-back" size={24} color={theme.glassText} style={{ marginRight: 2 }} />
-              </GlassView>
+        <BackButton onPress={handleBack} />
+        <View style={styles.headerCenter}>
+          {/* メイト画像 */}
+          <View style={styles.headerAvatar}>
+            {mateImageUrl ? (
+              <Image 
+                source={{ uri: mateImageUrl }} 
+                style={styles.headerAvatarImage}
+                defaultSource={require('@/assets/images/icon.png')}
+              />
             ) : (
-              <View style={[styles.backButtonFallback, { backgroundColor: colorScheme === 'dark' ? 'rgba(50,50,50,0.8)' : 'rgba(255,255,255,0.8)' }]}>
-                <Ionicons name="chevron-back" size={24} color={theme.tint} style={{ marginRight: 2 }} />
-              </View>
+              <Ionicons name="person" size={20} color={colorScheme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'} />
             )}
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
-        <View style={styles.headerSpacer} />
+          </View>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
+        </View>
+        {/* 迷惑レポートボタン */}
+        <TouchableOpacity onPress={handleReportButtonPress} style={styles.reportButtonContainer}>
+          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+            <GlassView style={styles.reportButtonGlass} isInteractive>
+              <View style={styles.reportButtonInner}>
+                <Ionicons name="flag-outline" size={20} color="#FF3B30" />
+              </View>
+            </GlassView>
+          ) : (
+            <View style={[
+              styles.reportButtonFallback,
+              {
+                backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+              }
+            ]}>
+              <Ionicons name="flag-outline" size={20} color="#FF3B30" />
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* メッセージリスト */}
@@ -281,15 +376,6 @@ export default function ChatScreen() {
           inverted
         />
       </Animated.View>
-
-      {isThinking && (
-        <View style={[styles.thinkingContainer]}>
-          <ActivityIndicator size="small" color={theme.icon} />
-          <Text style={[styles.thinkingText, { color: theme.icon }]}>
-            {mateName}が考え中...
-          </Text>
-        </View>
-      )}
 
       {/* 入力欄（固定位置 + アニメーション） */}
       <Animated.View style={[
@@ -373,6 +459,90 @@ export default function ChatScreen() {
           )}
         </Animated.View>
       </Animated.View>
+
+      {/* 迷惑レポート確認モーダル */}
+      <Modal
+        visible={showReportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleReportCancel}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={handleReportCancel}
+        >
+          <Pressable 
+            style={styles.modalContentWrapper}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+              <GlassView style={styles.modalGlass} isInteractive>
+                <View style={styles.modalContent}>
+                  <Ionicons name="flag" size={38} color="#FF3B30" style={styles.modalIcon} />
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    不適切なコンテンツを報告しますか？
+                  </Text>
+                  <Text style={[styles.modalMessage, { color: theme.icon }]}>
+                    このメイトとの会話履歴が運営に送信されます。
+                  </Text>
+                  <View style={styles.modalButtons}>
+                    <Pressable 
+                      onPress={handleReportCancel}
+                      style={styles.modalButton}
+                    >
+                      <Text style={[styles.modalButtonText, { color: theme.text }]}>
+                        キャンセル
+                      </Text>
+                    </Pressable>
+                    <Pressable 
+                      onPress={handleReportConfirm}
+                      style={[styles.modalButton, styles.modalButtonReport]}
+                    >
+                      <Text style={[styles.modalButtonText, { color: '#FF3B30' }]}>
+                        報告する
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </GlassView>
+            ) : (
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 28 : 18}
+                tint={colorScheme === 'dark' ? 'dark' : 'light'}
+                style={styles.modalBlur}
+              >
+                <View style={styles.modalContent}>
+                  <Ionicons name="flag" size={48} color="#FF3B30" style={styles.modalIcon} />
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    不適切なコンテンツを報告しますか？
+                  </Text>
+                  <Text style={[styles.modalMessage, { color: theme.icon }]}>
+                    このメイトとの会話履歴が運営に送信されます。
+                  </Text>
+                  <View style={styles.modalButtons}>
+                    <Pressable 
+                      onPress={handleReportCancel}
+                      style={styles.modalButton}
+                    >
+                      <Text style={[styles.modalButtonText, { color: theme.text }]}>
+                        キャンセル
+                      </Text>
+                    </Pressable>
+                    <Pressable 
+                      onPress={handleReportConfirm}
+                      style={[styles.modalButton, styles.modalButtonReport]}
+                    >
+                      <Text style={[styles.modalButtonText, { color: '#FF3B30' }]}>
+                        報告する
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </BlurView>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -397,34 +567,54 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 54 : 16,
     paddingBottom: 8,
   },
-  backButtonContainer: {
-    borderRadius: 20,
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
     overflow: 'hidden',
   },
-  backButtonGlass: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+  headerAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
   },
-  headerSpacer: {
-    width: 40, // 戻るボタンと同じ幅でバランスを取る
+  reportButtonContainer: {
+    width: 44,
+    height: 44,
+  },
+  reportButtonGlass: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  reportButtonFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  reportButtonInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messageListContainer: {
     flex: 1,
@@ -531,14 +721,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.8)',
   },
-  thinkingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
-    padding: 8,
+    alignItems: 'center',
   },
-  thinkingText: {
-    marginLeft: 8,
+  modalContentWrapper: {
+    width: '80%',
+    maxWidth: 340,
+  },
+  modalGlass: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  modalBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  modalContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalMessage: {
     fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    alignItems: 'center',
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+  },
+  modalButtonReport: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

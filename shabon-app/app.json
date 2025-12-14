@@ -20,7 +20,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -44,6 +47,28 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/a8629c36-0e43-4cd8-b2f2-f8d4bcbe5ca1"
+    },
+    "runtimeVersion": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "a8629c36-0e43-4cd8-b2f2-f8d4bcbe5ca1"
+      },
+      "apiUrlDev": "http://localhost:8000",
+      "apiUrlProd": "https://chatcraft-api-v3.onrender.com",
+      "feedbackFormUrl": "https://forms.gle/bWYV5a5iGiqabK289",
+      "privacyPolicyUrl": "https://shabon.app/privacy",
+      "sentryDsn": "",
+      "environment": "development",
+      "gaMeasurementId": "",
+      "googleClientId": "",
+      "router": {}
+    },
+    "owner": "looseandkeen"
   }
 }

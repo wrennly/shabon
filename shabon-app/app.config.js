@@ -4,6 +4,10 @@ module.exports = ({ config }) => {
   return {
     ...config,
     extra: {
+      ...config.extra,
+      eas: {
+        projectId: "a8629c36-0e43-4cd8-b2f2-f8d4bcbe5ca1"
+      },
       apiUrlDev: process.env.EXPO_PUBLIC_API_URL_DEV || 'http://localhost:8000',
       apiUrlProd: process.env.EXPO_PUBLIC_API_URL_PROD || 'https://chatcraft-api-v3.onrender.com',
       feedbackFormUrl: process.env.EXPO_PUBLIC_FEEDBACK_FORM_URL || 'https://forms.gle/bWYV5a5iGiqabK289',

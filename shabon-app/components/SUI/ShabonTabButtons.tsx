@@ -1,5 +1,6 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { BlurView } from 'expo-blur';
 import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, View, Platform } from 'react-native';
@@ -28,9 +29,10 @@ const DEFAULT_TABS: TabItem[] = [
   { key: 'explore', icon: 'search', label: 'Search' },
 ];
 
-const ACTIVE_COLOR = '#007AFF'; // Blue
+const ACTIVE_COLOR_LIGHT = '#007AFF'; // Blue (ライトモード)
+const ACTIVE_COLOR_DARK = '#5AC8FA';   // Soft Cyan Blue (ダークモード - 優しい青)
 const INACTIVE_COLOR_LIGHT = '#607D8B'; // Material Blue Grey 500
-const INACTIVE_COLOR_DARK = '#B0BEC5';  // Material Blue Grey 200
+const INACTIVE_COLOR_DARK = '#9BA1A6';  // 優しいグレー (ダークモード)
 
 const TabButtonWrapper = ({ 
   tab, 
@@ -45,38 +47,69 @@ const TabButtonWrapper = ({
   isDark: boolean, 
   theme: any 
 }) => {
-    // スケールアニメーションは入れずに、シャドウと縁取りで立体感を出す
+    // iOS 26+ Liquid Glass または BlurView フォールバック
+    const useGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
     return (
         <View style={styles.buttonContainer}>
-            <BlurView
-                intensity={Platform.OS === 'ios' ? 20 : 10}
-                tint={isDark ? 'dark' : 'light'}
-                style={styles.blurCircle}
-            >
-                <ShabonButton
-                    size={70}
-                    onPress={() => onPress(tab.key)}
-                    icon={
-                        <Ionicons 
-                            name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
-                            size={28} 
-                            color={isActive ? ACTIVE_COLOR : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
-                        />
-                    }
-                    variant={isActive ? 'primary' : 'secondary'}
-                    // Only show rainbow on active tab
-                    rainbowStrength={isActive ? 2.0 : 0.0}
-                    style={{ 
-                        backgroundColor: 'transparent',
-                    }}
-                    containerStyle={{
-                        shadowOpacity: 0,
-                        elevation: 0,
-                        backgroundColor: 'transparent',
-                    }}
-                />
-            </BlurView>
+            {useGlass ? (
+                <GlassView
+                    style={styles.glassCircle}
+                    isInteractive={true}
+                >
+                    <ShabonButton
+                        size={70}
+                        onPress={() => onPress(tab.key)}
+                        icon={
+                            <Ionicons 
+                                name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
+                                size={28} 
+                                color={isActive ? (isDark ? ACTIVE_COLOR_DARK : ACTIVE_COLOR_LIGHT) : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
+                            />
+                        }
+                        variant={isActive ? 'primary' : 'secondary'}
+                        // Only show rainbow on active tab
+                        rainbowStrength={isActive ? 2.0 : 0.0}
+                        style={{ 
+                            backgroundColor: 'transparent',
+                        }}
+                        containerStyle={{
+                            shadowOpacity: 0,
+                            elevation: 0,
+                            backgroundColor: 'transparent',
+                        }}
+                    />
+                </GlassView>
+            ) : (
+                <BlurView
+                    intensity={Platform.OS === 'ios' ? 20 : 10}
+                    tint={isDark ? 'dark' : 'light'}
+                    style={styles.blurCircle}
+                >
+                    <ShabonButton
+                        size={70}
+                        onPress={() => onPress(tab.key)}
+                        icon={
+                            <Ionicons 
+                                name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
+                                size={28} 
+                                color={isActive ? (isDark ? ACTIVE_COLOR_DARK : ACTIVE_COLOR_LIGHT) : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
+                            />
+                        }
+                        variant={isActive ? 'primary' : 'secondary'}
+                        // Only show rainbow on active tab
+                        rainbowStrength={isActive ? 2.0 : 0.0}
+                        style={{ 
+                            backgroundColor: 'transparent',
+                        }}
+                        containerStyle={{
+                            shadowOpacity: 0,
+                            elevation: 0,
+                            backgroundColor: 'transparent',
+                        }}
+                    />
+                </BlurView>
+            )}
         </View>
     );
 };
@@ -116,7 +149,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    pointerEvents: 'box-none',
+    pointerEvents: 'box-none', // タブバー自体はタッチを通過させる
   },
   row: {
       flexDirection: 'row',
@@ -134,6 +167,8 @@ const styles = StyleSheet.create({
       shadowOpacity: 0.18,
       shadowRadius: 10,
       elevation: 10,
+      // タッチイベントを確実に受け取る
+      pointerEvents: 'auto',
   },
   blurCircle: {
       width: 70,
@@ -143,5 +178,13 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       overflow: 'hidden', // Ensure content is clipped to circle
       backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  glassCircle: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden', // Ensure content is clipped to circle
   }
 });

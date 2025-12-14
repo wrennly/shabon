@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Animated, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Animated, TouchableOpacity, Alert, Image } from 'react-native';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { apiClient, authService } from '@/services/api';
@@ -18,6 +18,8 @@ interface Mate {
   mate_id: string;
   last_message?: string;
   is_public?: boolean;
+  image_url?: string | null;
+  last_chat_time?: string;
 }
 
 import { useIsFocused } from '@react-navigation/native';
@@ -30,27 +32,66 @@ export default function MatesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // キャッシュ用ref
+  const cacheRef = useRef<{ data: Mate[] | null; timestamp: number }>({ 
+    data: null, 
+    timestamp: 0 
+  });
+  const CACHE_DURATION = 30000; // 30秒間キャッシュ有効
 
   useEffect(() => {
     if (isFocused) {
-      checkAuthAndLoad();
+      // チャットから戻った時は強制リフレッシュ
+      checkAuthAndLoad(true);
     }
   }, [isFocused]);
 
-  const checkAuthAndLoad = async () => {
+  const checkAuthAndLoad = async (forceRefresh = false) => {
     const isLoggedIn = await authService.isLoggedIn();
     if (!isLoggedIn) {
       router.replace('/login');
       return;
     }
-    loadMates();
+    loadMates(forceRefresh);
   };
 
-  const loadMates = async () => {
+  const loadMates = async (forceRefresh = false) => {
     try {
-      setLoading(true);
+      // キャッシュチェック
+      const now = Date.now();
+      const cacheValid = cacheRef.current.data && 
+                        (now - cacheRef.current.timestamp) < CACHE_DURATION;
+      
+      if (cacheValid && !forceRefresh) {
+        // キャッシュから即座に表示（ローディングなし）
+        setMates(cacheRef.current.data!);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      
+      // キャッシュがない、または古い場合のみローディング表示
+      if (!cacheRef.current.data) {
+        setLoading(true);
+      }
+      
       const response = await apiClient.get('/mates/?filter=chatted_only');
-      setMates(response.data);
+      
+      // Sort by last_chat_time (newest first)
+      const sortedMates = response.data.sort((a: Mate, b: Mate) => {
+        if (!a.last_chat_time) return 1;
+        if (!b.last_chat_time) return -1;
+        return new Date(b.last_chat_time).getTime() - new Date(a.last_chat_time).getTime();
+      });
+      
+      setMates(sortedMates);
+      
+      // キャッシュを更新
+      cacheRef.current = {
+        data: sortedMates,
+        timestamp: now
+      };
     } catch (error: any) {
       console.error('Failed to load mates:', error);
       if (error.response?.status === 401) {
@@ -64,7 +105,7 @@ export default function MatesScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadMates();
+    loadMates(true); // 強制リフレッシュ
   };
 
   const handleMateSelect = (mate: Mate) => {
@@ -110,6 +151,18 @@ export default function MatesScreen() {
       >
         <View style={[styles.listItemInner, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.2)' }]}>
           <View style={styles.listItemContent}>
+            {/* メイト画像 */}
+            <View style={styles.mateAvatar}>
+              {item.image_url ? (
+                <Image 
+                  source={{ uri: item.image_url }} 
+                  style={styles.mateAvatarImage}
+                  defaultSource={require('@/assets/images/icon.png')}
+                />
+              ) : (
+                <Ionicons name="person" size={24} color={colorScheme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'} />
+              )}
+            </View>
             <View style={styles.listItemTextContainer}>
               <Text style={[styles.listItemTitle, { color: theme.text }]}>{item.mate_name}</Text>
               {item.last_message && (
@@ -197,6 +250,21 @@ const styles = StyleSheet.create({
   listItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  mateAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  mateAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   listItemTextContainer: {
     flex: 1,

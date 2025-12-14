@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Platform, Pressable, TextInput, Dimensions, Keyboard, Animated } from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Platform, Pressable, TextInput, Dimensions, Keyboard, Animated, Image } from 'react-native';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { apiClient, authService } from '@/services/api';
@@ -20,6 +20,7 @@ interface Mate {
   mate_id: string | null;
   is_public: boolean;
   last_message: string | null;
+  image_url: string | null;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -156,9 +157,17 @@ export default function ExploreScreen() {
       ]}
     >
       <View style={styles.mateCardInner}>
-        {/* アバター placeholder */}
+        {/* メイト画像 */}
         <View style={styles.avatarPlaceholder}>
-          <Ionicons name="person" size={32} color={colorScheme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'} />
+          {item.image_url ? (
+            <Image 
+              source={{ uri: item.image_url }} 
+              style={styles.avatarImage}
+              defaultSource={require('@/assets/images/icon.png')}
+            />
+          ) : (
+            <Ionicons name="person" size={32} color={colorScheme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'} />
+          )}
         </View>
         <Text style={[styles.mateName, { color: theme.glassText }]} numberOfLines={1}>{item.mate_name}</Text>
         {item.mate_id && (
@@ -230,7 +239,7 @@ export default function ExploreScreen() {
               <Ionicons name="search" size={18} color={theme.glassText} style={styles.searchIcon} />
               <TextInput
                 ref={searchInputRef}
-                placeholder="メイトを検索"
+                placeholder="メイト検索"
                 placeholderTextColor={theme.glassText}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -392,6 +401,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
   mateName: {
     fontSize: 15,
