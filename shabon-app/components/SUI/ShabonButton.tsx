@@ -89,9 +89,13 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
         if (Platform.OS === 'web') {
             return {};
         }
+        // Ensure layout dimensions are valid (non-zero, non-null)
+        const width = layout.width > 0 ? layout.width : 100;
+        const height = layout.height > 0 ? layout.height : 100;
+        
         return {
             iTime: time.value / 1000,
-            iResolution: vec(layout.width, layout.height),
+            iResolution: vec(width, height),
             iIsDark: isDark ? 1.0 : 0.0,
             iRoundness: isCircle ? 1.0 : 0.6, // 1.0 for circle, 0.6 for rounded rect
             iRainbowStrength: rainbowStrength !== undefined ? rainbowStrength : (variant === 'outline' ? 0.3 : (disabled ? 0.0 : 1.0)),
