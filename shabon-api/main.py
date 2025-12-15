@@ -248,6 +248,7 @@ async def get_current_user(
     user = session.exec(select(Users).where(Users.supabase_uid == supabase_uid)).first()
 
     if not user:
+        # 新規ユーザー作成（created_atとlast_login_atは自動設定）
         user = Users(
             supabase_uid=supabase_uid,
             username=email or supabase_uid,
@@ -269,6 +270,12 @@ async def get_current_user(
         session.add(user)
         session.commit()
         session.refresh(user)
+    
+    # 最終ログイン日を更新
+    user.last_login_at = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
 
     return user
 

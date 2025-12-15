@@ -47,6 +47,8 @@ class Users(UserBase, table=True):
     __tablename__: str = "users"
     id: Optional[int] = Field(default=None, primary_key=True)
     is_deleted: bool = Field(default=False, index=True)  # Logical deletion flag
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow, index=True)  # 登録日
+    last_login_at: Optional[datetime] = Field(default_factory=datetime.utcnow, index=True)  # 最終ログイン日
     ai_mates: List["AiMates"] = Relationship(back_populates="user")
 
 # ---
