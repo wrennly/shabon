@@ -56,11 +56,11 @@ float fbm(vec2 p) {
 
 // --- Color Palette (Shabon由来) ---
 vec3 palette(float t) {
-    // 鮮やかさと深みを両立させたパレット
-    vec3 a = vec3(0.5, 0.5, 0.5);
-    vec3 b = vec3(0.5, 0.5, 0.5);
+    // パステルのブルー・ピンク・紫（茶色なし）
+    vec3 a = vec3(0.75, 0.7, 0.85); // ベースを明るく（青紫寄り）
+    vec3 b = vec3(0.25, 0.3, 0.25); // コントラスト控えめ
     vec3 c = vec3(1.0, 1.0, 1.0);
-    vec3 d = vec3(0.263, 0.416, 0.557);
+    vec3 d = vec3(0.0, 0.33, 0.67); // ブルー→ピンク→紫のサイクル
     return a + b * cos(6.28318 * (c * t + d));
 }
 
@@ -108,7 +108,9 @@ vec4 main(vec2 fragCoord) {
     
     // 色の決定（虹色 + ダークモード対応）
     vec3 color = palette(f * 0.5 + dist * 2.0 + t);
-    color = mix(color, color * 0.5, iIsDark); // ダークモードは少し落ち着かせる
+    // パステル感を強調（彩度を下げて明度を上げる）
+    color = mix(color, vec3(0.9), 0.3); // 白を混ぜてパステルに
+    color = mix(color, color * 0.6, iIsDark); // ダークモードは少し落ち着かせる
 
     // 4. ライティング (Liquid要素の真骨頂)
     
@@ -117,21 +119,21 @@ vec4 main(vec2 fragCoord) {
     float cosTheta = max(0.0, dot(normal, viewDir));
     float fFactor = fresnel(cosTheta, 1.0, 1.3); // 屈折率1.3くらい
     
-    // エッジに白い光と虹色を混ぜる
-    vec3 rimColor = mix(vec3(1.0), palette(dist * 5.0 + t * 2.0), 0.5);
-    color = mix(color, rimColor, fFactor * 0.8);
+    // エッジに優しいパステルの光を混ぜる
+    vec3 rimColor = mix(vec3(0.95), palette(dist * 5.0 + t * 2.0), 0.7); // より白っぽく
+    color = mix(color, rimColor, fFactor * 0.3); // 控えめに
 
-    // B. スペキュラハイライト（濡れたようなツヤ）
+    // B. スペキュラハイライト（優しいツヤ）
     vec3 lightDir = normalize(vec3(-1.0, -1.0, 1.0)); // 左上からの光
     vec3 halfVec = normalize(lightDir + viewDir);
-    float specular = pow(max(0.0, dot(normal, halfVec)), 40.0); // 40.0はツヤの鋭さ
+    float specular = pow(max(0.0, dot(normal, halfVec)), 30.0); // 20.0に下げて柔らかく
     
-    // ハイライトを加算（虹色の上から白を乗せる）
-    color += vec3(1.0) * specular * 0.8;
+    // ハイライトをさらに控えめに（左上弱め）
+    color += vec3(1.0) * specular * 0.2; // 0.2に下げてさらに優しく
 
     // 5. 最終合成
-    // 透明感の調整：中心は少し透けさせて、エッジは濃くする
-    float opacity = 0.3 + fFactor * 0.7; // ベース透明度0.3
+    // 透明感の調整：優しく透けさせる
+    float opacity = 0.4 + fFactor * 0.5; // ベース透明度を上げて優しく
     opacity = clamp(opacity * iRainbowStrength, 0.0, 1.0);
     
     // アルファチャンネルにも形状マスクを適用

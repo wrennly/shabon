@@ -9,9 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "icon": {
+        "dark": "./assets/images/Icon-iOS-Dark-1024x1024@1x.png",
+        "light": "./assets/images/Icon-iOS-Default-1024x1024@1x.png",
+        "tinted": "./assets/images/Icon-iOS-Tinted-1024x1024@1x.png"
+      },
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.shabon",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {

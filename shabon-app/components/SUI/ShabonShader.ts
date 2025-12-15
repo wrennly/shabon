@@ -90,6 +90,9 @@ vec4 main(vec2 fragCoord) {
     vec3 colorLight = paletteLight(rainbowInput);
     vec3 colorDark = paletteDark(rainbowInput);
     
+    // ダークモードはよりパステルに（白を混ぜる）
+    colorDark = mix(colorDark, vec3(0.85), 0.35);
+    
     vec3 rainbow = mix(colorLight, colorDark, iIsDark);
     
     // 3. Fresnel / Edge Glow (The "Bubble" 3D look)
@@ -110,10 +113,11 @@ vec4 main(vec2 fragCoord) {
     // Modulate start based on diagonal to make Bottom-Right significantly wider
     // (uv.x + uv.y) / 2.0 ranges from 0.0 (Top-Left) to 1.0 (Bottom-Right)
     float diagonal = (uv.x + uv.y) * 0.5;
-    // Top-Left: 0.5 (Narrow), Bottom-Right: -0.6 (Much wider, reaches center)
-    float rainbowStart = mix(0.5, -0.6, diagonal);
+    // Top-Left: 0 (中心まで到達), Bottom-Right: -1.5 (Much wider, reaches center and beyond)
+    float rainbowStart = mix(0.2, -1.2, diagonal);
     
     // Apply iRainbowStrength to control visibility
+    // smoothstepの範囲を広げて中心部分もカバー
     float rainbowMask = smoothstep(rainbowStart, 0.5, dist) * iRainbowStrength;
 
     // 3D Lighting Effect: Reduce rainbow in Top-Left to simulate light source reflection
@@ -133,13 +137,13 @@ vec4 main(vec2 fragCoord) {
     vec2 lightDir = normalize(vec2(-1.0, -1.0)); // Top-Left direction
     float lightDot = dot(normalize(p), lightDir); // 1.0 at Top-Left, -1.0 at Bottom-Right
     
-    // Mask: 0.2 (faint rainbow) at Top-Left, 1.0 (full rainbow) at Bottom-Right
+    // Mask: 0.1 (中心部分も虹を見せる) at Top-Left, 1.0 (full rainbow) at Bottom-Right
     // lightDot is 1.0 at Top-Left, -1.0 at Bottom-Right.
     // We want 1.0 (Full) when lightDot is low (Bottom-Right).
     // smoothstep(-0.2, 0.8, lightDot) -> 0.0 at Bottom-Right, 1.0 at Top-Left.
     // Invert it to get the mask we want.
     float lightingMask = 1.0 - smoothstep(-0.2, 0.8, lightDot); 
-    // Clamp to ensure we don't go below a minimum visibility (e.g. 0.2)
+    // Clamp to ensure we don't go below a minimum visibility (0.4に上げて中心部分も色を乗せる)
     lightingMask = max(0.2, lightingMask);
     
     rainbowMask *= lightingMask;
@@ -153,14 +157,67 @@ vec4 main(vec2 fragCoord) {
     // 4. Specular Highlights (Gloss)
     float highlight = smoothstep(0.65, 0.7, f) * 0.5; // Softer highlight
     
+    // 5. Top-Left White Highlight (新規追加)
+    // 左上に白いハイライトを追加
+    vec2 highlightPos = vec2(-0.25, -0.25); // 左上の位置
+    float highlightDist = length(p - highlightPos);
+    float topLeftHighlight = smoothstep(0.3, 0.0, highlightDist) * 0.6; // 0.6は強度
+    
+    // 6. Edge Glow (立体感のある縁の光 - LiquidGlass風)
+    // ダークモードは縁を狭く
+    float edgeInner = mix(0.42, 0.45, iIsDark); // ダークモードは内側を狭く
+    float edgeBase = smoothstep(edgeInner, 0.5, dist) * smoothstep(0.5, edgeInner, dist);
+    
+    // 既存のlightDotを再利用（133-134行目で定義済み）
+    // lightDot: 1.0 (左上), -1.0 (右下)
+    
+    // 左上と右下で強い光沢（フレネル風）
+    float topLeftGlow = smoothstep(-0.3, 1.0, lightDot);      // 左上が強い
+    float bottomRightGlow = smoothstep(-1.0, 0.3, -lightDot); // 右下が強い
+    
+    // 合成：左上と右下で縁が厚く光る
+    float edgeGlow = edgeBase * (topLeftGlow * 0.8 + bottomRightGlow * 0.6);
+    // ダークモードは縁の強度を下げる
+    float edgeStrength = mix(1.2, 0.7, iIsDark);
+    edgeGlow = pow(edgeGlow, 0.5) * edgeStrength;
+    
     // --- Composition ---
     
-    // Center color: White for Light mode, Transparent/Dark for Dark mode
-    vec3 centerColor = mix(vec3(0.95), vec3(0.0), iIsDark);
+    // Center color: Light Grey for Light mode (白いハイライトを目立たせる), Transparent for Dark mode
+    vec3 centerColor = mix(vec3(0.88), vec3(0.0), iIsDark);
     
     // Apply rainbow based on rainbowMask
     // Reduced mix strength to make rainbow more subtle (was 0.9)
     vec3 baseColor = mix(centerColor, rainbow, rainbowMask * 0.6);
+    
+    // 7. Rainbow Depth Effect (虹に立体感を追加)
+    // 虹のエリアにグラデーションを追加して奥行き感を出す
+    float rainbowDepth = smoothstep(0.3, 0.5, dist) * rainbowMask;
+    
+    // 虹のエリアに微細なスペキュラハイライト（光沢感）
+    vec3 rainbowLightDir = normalize(vec3(-0.7, -0.7, 1.0)); // 左上からの光
+    vec3 normal3D = normalize(vec3(p * 2.0, sqrt(max(0.0, 1.0 - dist * dist))));
+    vec3 viewDir = vec3(0.0, 0.0, 1.0);
+    vec3 halfVec = normalize(rainbowLightDir + viewDir);
+    float rainbowSpecular = pow(max(0.0, dot(normal3D, halfVec)), 32.0) * rainbowMask;
+    
+    // 虹に白いハイライトを加算（ガラスのような光沢）
+    // ダークモードは光沢を減らす
+    float specularStrength = mix(0.7, 0.01, iIsDark);
+    baseColor += vec3(1.0) * rainbowSpecular * specularStrength;
+    
+    // 虹のエリアに深度グラデーション（明るさの変化）
+    baseColor = mix(baseColor, baseColor * 1.15, rainbowDepth * 0.3);
+    
+    // Add top-left white highlight
+    // ダークモードは左上ハイライトも抑える
+    float highlightStrength = mix(1.0, 0.4, iIsDark);
+    baseColor = mix(baseColor, vec3(1.0), topLeftHighlight * highlightStrength);
+    
+    // Add edge glow (立体感のある縁の光)
+    // ダークモードは縁の光沢を抑える
+    float edgeGlowStrength = mix(0.7, 0.25, iIsDark);
+    baseColor = mix(baseColor, vec3(1.0), edgeGlow * edgeGlowStrength);
     
     // --- Transparency (Alpha) ---
     
@@ -182,6 +239,12 @@ vec4 main(vec2 fragCoord) {
     // Highlights
     // Scale highlight by iFillAlpha to remove "white part" when transparent
     alpha += highlight * 0.6 * iFillAlpha;
+    
+    // Top-left highlight alpha
+    alpha += topLeftHighlight * 0.5 * clamp(iRainbowStrength + iFillAlpha, 0.0, 1.0);
+    
+    // Edge glow alpha (縁の光の透明度)
+    alpha += edgeGlow * 0.6;
     
     // Dark mode adjustment: Make it slightly more visible/glowing
     // Reduced from 0.1 to 0.05 to reduce glare

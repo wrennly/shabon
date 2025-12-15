@@ -3,7 +3,7 @@ import { Canvas, RoundedRect, Shader, useClock, vec } from '@shopify/react-nativ
 import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle, Text, TextStyle, View, ActivityIndicator, Platform } from 'react-native';
 import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-import { getShabonShader } from './ShabonShader';
+import { getShabonShader } from './ShabonShader'; // 元のShabonShaderに戻す
 import { Colors } from '@/constants/theme';
 
 interface ShabonButtonProps {
