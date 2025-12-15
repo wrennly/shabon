@@ -367,14 +367,28 @@ def get_public_mates(
     
     print(f"📊 Cache miss for public_mates - fetching from DB")
     
-    # Fetch public mates with pagination
+    # Fetch public mates with pagination, ordered by conversation count (popularity)
+    # サブクエリで各メイトの会話数をカウント
+    conversation_count = (
+        select(
+            ChatHistory.mate_id,
+            func.count(ChatHistory.id).label('conversation_count')
+        )
+        .group_by(ChatHistory.mate_id)
+        .subquery()
+    )
+    
     public_mates = session.exec(
         select(AiMates)
+        .outerjoin(conversation_count, AiMates.id == conversation_count.c.mate_id)
         .where(
             AiMates.is_public == True,
             AiMates.is_deleted == False
         )
-        .order_by(AiMates.id.desc())
+        .order_by(
+            func.coalesce(conversation_count.c.conversation_count, 0).desc(),  # 会話数が多い順
+            AiMates.id.desc()  # 同じ会話数なら新しい順
+        )
         .offset(skip)
         .limit(limit)
     ).all()

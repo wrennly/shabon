@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.shabon"
+      "bundleIdentifier": "com.anonymous.shabon",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -49,7 +50,7 @@
       "reactCompiler": true
     },
     "updates": {
-      "enabled": true,
+      "enabled": false,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/a8629c36-0e43-4cd8-b2f2-f8d4bcbe5ca1"

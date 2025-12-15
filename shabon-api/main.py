@@ -6,6 +6,7 @@ from typing import List, Annotated, Optional, Dict, Any
 import os
 import secrets
 import json
+import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -25,6 +26,13 @@ from functools import lru_cache
 import redis
 from redis import Redis
 import jwt
+
+# ロギング設定
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 from models import (
     MAttributes, MAttributeOptions, 
@@ -71,7 +79,8 @@ from utils.rag import (
     set_gemini_model
 )
 
-print("DATABASE_URL:", os.getenv("DATABASE_URL"))
+# DATABASE_URLはログに出力しない（セキュリティリスク）
+logger.info("Database connection initialized")
 
 # ---
 # ---
@@ -101,9 +110,10 @@ app = FastAPI()
 
 @app.middleware("http")
 async def log_request_origin(request, call_next):
+    # OriginヘッダーはログレベルDEBUGで記録（本番では出力されない）
     origin = request.headers.get("origin")
     if origin:
-        print(f"DEBUG: Request Origin: {origin}")
+        logger.debug(f"Request Origin: {origin}")
     response = await call_next(request)
     return response
 
@@ -181,9 +191,8 @@ async def get_current_user(
 ) -> Users:
     """Verify authenticated user from Supabase JWT in Authorization header"""
 
-    # Debug: log raw Authorization header value
-    print(f"DEBUG: Authorization header value: {authorization}")
-
+    # Authorizationヘッダーはログに出力しない（セキュリティリスク）
+    
     if authorization is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -209,15 +218,16 @@ async def get_current_user(
             algorithms=["HS256"],
             audience="authenticated",
         )
-        print("DEBUG: Decoded JWT payload:", payload)
+        # JWTペイロードはログに出力しない（個人情報含む可能性）
+        logger.debug("JWT validation successful")
     except jwt.ExpiredSignatureError as e:
-        print("DEBUG: JWT expired:", str(e))
+        logger.warning("JWT expired")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="アクセストークンの有効期限が切れています",
         )
     except jwt.InvalidTokenError as e:
-        print("DEBUG: JWT invalid:", str(e))
+        logger.warning("JWT invalid")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="アクセストークンが無効です",
@@ -249,7 +259,7 @@ async def get_current_user(
 
     # Reactivate deleted users on re-login
     if user.is_deleted:
-        print(f"♻️ Reactivating deleted user: {user.username}")
+        logger.info(f"Reactivating deleted user: {user.id}")  # usernameではなくIDのみログ
         user.is_deleted = False
         # Restore username if it was modified during deletion
         if user.username.startswith("deleted_"):
