@@ -64,7 +64,9 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
     // or we can use a fixed large enough canvas.
     // Let's use a layout state for accurate shader rendering if needed, 
     // but for now let's assume width is number or fallback to 300 for shader res.
-    const [layout, setLayout] = React.useState({ width: isCircle ? size : 300, height: finalHeight });
+    const initialWidth = isCircle ? (size || 70) : 300;
+    const initialHeight = finalHeight || 50;
+    const [layout, setLayout] = React.useState({ width: initialWidth, height: initialHeight });
 
     const handlePress = () => {
         if (disabled || loading) return;
@@ -93,13 +95,16 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
         const width = layout.width > 0 ? layout.width : 100;
         const height = layout.height > 0 ? layout.height : 100;
         
+        // Ensure time.value is valid
+        const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
+        
         return {
-            iTime: time.value / 1000,
+            iTime: timeValue / 1000,
             iResolution: vec(width, height),
             iIsDark: isDark ? 1.0 : 0.0,
-            iRoundness: isCircle ? 1.0 : 0.6, // 1.0 for circle, 0.6 for rounded rect
+            iRoundness: isCircle ? 1.0 : 0.6,
             iRainbowStrength: rainbowStrength !== undefined ? rainbowStrength : (variant === 'outline' ? 0.3 : (disabled ? 0.0 : 1.0)),
-            iFillAlpha: variant === 'outline' ? 0.0 : (disabled ? 0.3 : 0.8), // Transparent center for outline
+            iFillAlpha: variant === 'outline' ? 0.0 : (disabled ? 0.3 : 0.8),
         };
     });
 
@@ -124,7 +129,7 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
                 containerStyle,
                 animatedStyle
             ]}>
-                 {Platform.OS !== 'web' && (
+                 {Platform.OS !== 'web' && getShabonShader() && layout.width > 0 && layout.height > 0 && (
                      <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
                         <RoundedRect 
                             x={0} 

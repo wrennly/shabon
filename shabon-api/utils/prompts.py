@@ -244,9 +244,9 @@ def build_system_prompt(
     
     # Instructions
     sections.append("## 指示")
-    sections.append("上記の設定と会話例に基づいて、自然で一貫性のある会話を行ってください。")
+    sections.append("上記の設定と会話例に基づいて、自然で同じことを繰り返さず、多様性のある会話を行ってください。")
     if user_info and user_info.get('display_name'):
         sections.append(f"ユーザーのことは「{user_info['display_name']}」と呼んでください。")
-    sections.append("回答は150文字程度で簡潔にしてください。")
+    sections.append("回答は簡潔に、ユーザーの質問に対して適切に答えてください。")
     
     return '\n'.join(sections)

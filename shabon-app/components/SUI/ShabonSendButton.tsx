@@ -76,12 +76,17 @@ export const ShabonSendButton: React.FC<ShabonSendButtonProps> = ({
     // シェーダー uniforms（Reanimated の useDerivedValue で毎フレーム更新）
     const uniforms = useDerivedValue(() => {
         if (Platform.OS === 'web') return {};
+        const safeSize = size > 0 ? size : 50;
+        const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
+        const pressedValue = (pressed && pressed.value !== undefined && pressed.value !== null) ? pressed.value : 0;
+        const depthValue = (depth && depth.value !== undefined && depth.value !== null) ? depth.value : 0;
+        
         return {
-            iTime: time.value / 1000,
-            iResolution: vec(size, size),
+            iTime: timeValue / 1000,
+            iResolution: vec(safeSize, safeSize),
             iIsDark: isDark ? 1.0 : 0.0,
-            iPressed: pressed.value,
-            iDepth: depth.value,
+            iPressed: pressedValue,
+            iDepth: depthValue,
         };
     });
 
@@ -99,7 +104,7 @@ export const ShabonSendButton: React.FC<ShabonSendButtonProps> = ({
         >
             <Animated.View style={[styles.container, { width: size, height: size }, animatedStyle]}>
                 {/* Liquid Glass 背景 (iOS のみ Skia シェーダー) */}
-                {isNative && (
+                {isNative && getLiquidGlassShader() && size > 0 && (
                     <Canvas style={StyleSheet.absoluteFill}>
                         <Circle cx={size / 2} cy={size / 2} r={size / 2}>
                             <Shader source={getLiquidGlassShader()!} uniforms={uniforms as any} />

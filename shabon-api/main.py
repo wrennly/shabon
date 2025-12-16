@@ -314,31 +314,58 @@ def get_settings_schema(session: Session = Depends(get_session)):
     return SettingsSchemaResponse(attributes=response_attributes)
 
 # チャットAPI
-# Gemini API 設定
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-if not GOOGLE_API_KEY:
-    raise ValueError("GOOGLE_API_KEY が設定されていません")
+# AI Provider設定
+from settings import AI_PROVIDER, DEEPSEEK_MODEL, DEEPSEEK_BASE_URL
 
-# Set the API key for Gemini (google.generativeai)
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+if AI_PROVIDER == "gemini":
+    # Gemini API 設定
+    GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+    if not GOOGLE_API_KEY:
+        raise ValueError("GOOGLE_API_KEY が設定されていません")
+    
+    # Set the API key for Gemini (google.generativeai)
+    os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+    
+    # モデル設定
+    generation_config = {
+        "temperature": 0.7,
+        "top_p": 1,
+        "top_k": 1,
+        "max_output_tokens": 1024,
+    }
+    model = genai.GenerativeModel( # type: ignore
+        model_name="models/gemini-flash-latest",
+        generation_config=generation_config # type: ignore
+    )
+    
+    # Set Gemini model for RAG utilities
+    set_gemini_model(model)
+    
+    # Set Gemini model for chat router
+    set_chat_model(model)
+    
+    logger.info("✅ Using Gemini Flash for AI chat")
 
-# モデル設定
-generation_config = {
-    "temperature": 0.7,
-    "top_p": 1,
-    "top_k": 1,
-    "max_output_tokens": 1024,
-}
-model = genai.GenerativeModel( # type: ignore
-    model_name="models/gemini-flash-latest",
-    generation_config=generation_config # type: ignore
-)
+elif AI_PROVIDER == "deepseek":
+    # DeepSeek API 設定
+    from utils.deepseek_client import DeepSeekClient
+    
+    DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
+    if not DEEPSEEK_API_KEY:
+        raise ValueError("DEEPSEEK_API_KEY が設定されていません")
+    
+    deepseek_client = DeepSeekClient(
+        api_key=DEEPSEEK_API_KEY,
+        base_url=DEEPSEEK_BASE_URL
+    )
+    
+    # Set DeepSeek client for chat router
+    set_chat_model(deepseek_client)
+    
+    logger.info("✅ Using DeepSeek v3 for AI chat")
 
-# Set Gemini model for RAG utilities
-set_gemini_model(model)
-
-# Set Gemini model for chat router
-set_chat_model(model)
+else:
+    raise ValueError(f"Unknown AI_PROVIDER: {AI_PROVIDER}")
 
 # Include routers
 # Note: get_current_user must be accessible to routers

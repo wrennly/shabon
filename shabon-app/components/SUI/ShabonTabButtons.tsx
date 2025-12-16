@@ -68,16 +68,7 @@ const TabButtonWrapper = ({
                             />
                         }
                         variant={isActive ? 'primary' : 'secondary'}
-                        // Only show rainbow on active tab
                         rainbowStrength={isActive ? 2.0 : 0.0}
-                        style={{ 
-                            backgroundColor: 'transparent',
-                        }}
-                        containerStyle={{
-                            shadowOpacity: 0,
-                            elevation: 0,
-                            backgroundColor: 'transparent',
-                        }}
                     />
                 </GlassView>
             ) : (
@@ -97,16 +88,7 @@ const TabButtonWrapper = ({
                             />
                         }
                         variant={isActive ? 'primary' : 'secondary'}
-                        // Only show rainbow on active tab
                         rainbowStrength={isActive ? 2.0 : 0.0}
-                        style={{ 
-                            backgroundColor: 'transparent',
-                        }}
-                        containerStyle={{
-                            shadowOpacity: 0,
-                            elevation: 0,
-                            backgroundColor: 'transparent',
-                        }}
                     />
                 </BlurView>
             )}

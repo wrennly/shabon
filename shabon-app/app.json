@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "shabon",
+    "name": "Shabon",
     "slug": "shabon",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "shabon",
+    "icon": "./assets/images/Icon-iOS-Default-1024x1024@1x.png",
+    "scheme": "Shabon",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -16,7 +16,10 @@
       },
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.shabon",
-      "buildNumber": "3"
+      "buildNumber": "5",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

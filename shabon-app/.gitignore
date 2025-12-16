@@ -4,3 +4,10 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# Build outputs
+dist/
+coverage/
+
+# iOS
+ios/

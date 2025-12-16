@@ -103,9 +103,14 @@ export const ShabonCard: React.FC<ShabonCardProps> = ({
     if (Platform.OS === 'web') {
       return {};
     }
+    // Ensure dimensions are valid
+    const width = (layout.width && layout.width > 0) ? layout.width : 300;
+    const height = (layout.height && layout.height > 0) ? layout.height : 200;
+    const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
+    
     return {
-      iTime: time.value / 1000,
-      iResolution: vec(layout.width || 300, layout.height || 200),
+      iTime: timeValue / 1000,
+      iResolution: vec(width, height),
       iIsDark: isDark ? 1.0 : 0.0,
       iRoundness: calculatedRoundness, 
       iRainbowStrength: rainbowStrength,
@@ -121,7 +126,7 @@ export const ShabonCard: React.FC<ShabonCardProps> = ({
         onLayout={(e) => setLayout({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
       >
         {/* Background Bubble Layer */}
-        {Platform.OS !== 'web' && (
+        {Platform.OS !== 'web' && getShabonShader() && layout.width > 0 && layout.height > 0 && (
           <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
             <Fill>
               <Shader source={getShabonShader()!} uniforms={uniforms as any} />

@@ -91,9 +91,14 @@ export const ShabonTabBar: React.FC<ShabonTabBarProps> = ({
     if (Platform.OS === 'web') {
       return {};
     }
+    // Ensure dimensions are valid
+    const width = TAB_BAR_WIDTH > 0 ? TAB_BAR_WIDTH : 300;
+    const height = TAB_BAR_HEIGHT > 0 ? TAB_BAR_HEIGHT : 70;
+    const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
+    
     return {
-      iTime: time.value / 1000,
-      iResolution: vec(TAB_BAR_WIDTH, TAB_BAR_HEIGHT),
+      iTime: timeValue / 1000,
+      iResolution: vec(width, height),
       iIsDark: isDark ? 1.0 : 0.0,
       iRoundness: 0.6, // Capsule shape (rounded rect)
       iRainbowStrength: isDark ? 0.6 : 1.0, // Stronger rainbow in light mode
@@ -123,7 +128,7 @@ export const ShabonTabBar: React.FC<ShabonTabBarProps> = ({
             />
 
             {/* Rainbow Shader Overlay */}
-            {Platform.OS !== 'web' && (
+            {Platform.OS !== 'web' && getShabonShader() && TAB_BAR_WIDTH > 0 && TAB_BAR_HEIGHT > 0 && (
                 <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
                     <RoundedRect
                         x={0}
@@ -132,7 +137,7 @@ export const ShabonTabBar: React.FC<ShabonTabBarProps> = ({
                         height={TAB_BAR_HEIGHT}
                         r={35}
                     >
-                        {getShabonShader() && <Shader source={getShabonShader()!} uniforms={uniforms as any} />}
+                        <Shader source={getShabonShader()!} uniforms={uniforms as any} />
                     </RoundedRect>
                 </Canvas>
             )}

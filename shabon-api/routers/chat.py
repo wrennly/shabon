@@ -40,16 +40,16 @@ from settings import (
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Import model from main (will be set via dependency)
-_gemini_model = None
+_ai_model = None
 
 def set_model(model):
-    """Set Gemini model for chat router"""
-    global _gemini_model
-    _gemini_model = model
+    """Set AI model for chat router (Gemini or DeepSeek)"""
+    global _ai_model
+    _ai_model = model
 
 def get_model():
-    """Get Gemini model"""
-    return _gemini_model
+    """Get AI model"""
+    return _ai_model
 
 # Dependency injection placeholder (will be set by main.py)
 get_current_user = None
@@ -177,52 +177,85 @@ def chat_with_ai(
         current_datetime=today
     )
         
-    # --- Gemini に渡す「会話履歴」を組み立てる ---
-    
-    # システムプロンプトを最初に設定
-    gemini_history = [
-        {
-            "role": "user",
-            "parts": [final_system_prompt]
-        },
-        {
-            "role": "model",
-            "parts": [f"了解しました。{user_display_name}さん、よろしくお願いします！"]
-        }
-    ]
+    # --- AI に渡す「会話履歴」を組み立てる ---
     
     # API使用料削減：履歴を最新N件に制限
     limited_history = request_data.history[-RAG_HISTORY_LIMIT:]
     
-    for msg in limited_history:
-        gemini_history.append({
-            "role": msg.role,
-            "parts": [msg.text]
-        })
+    # Check if model is DeepSeek or Gemini
+    from utils.deepseek_client import DeepSeekClient
+    is_deepseek = isinstance(model, DeepSeekClient)
     
-    # Gemini APIを呼び出し
-    try:
-        convo = model.start_chat(history=gemini_history) # type: ignore
-        response = convo.send_message(request_data.new_message)
+    if is_deepseek:
+        # DeepSeek format: [{"role": "user"/"assistant", "content": "..."}]
+        history_messages = []
+        for msg in limited_history:
+            role = "assistant" if msg.role == "model" else "user"
+            history_messages.append({
+                "role": role,
+                "content": msg.text
+            })
         
-        # Safety filterやその他の理由でテキストが取得できない場合の処理
+        # Call DeepSeek API
         try:
-            ai_reply_text = response.text
-        except ValueError as e:
-            # finish_reason を確認
-            if hasattr(response, 'candidates') and response.candidates:
-                finish_reason = response.candidates[0].finish_reason
-                safety_ratings = response.candidates[0].safety_ratings if hasattr(response.candidates[0], 'safety_ratings') else None
-                
-                print(f"⚠️  Gemini response blocked. Finish reason: {finish_reason}")
-                if safety_ratings:
-                    print(f"   Safety ratings: {safety_ratings}")
-                
-                # ユーザーフレンドリーなエラーメッセージ
-                ai_reply_text = "申し訳ございません。その内容についてはお答えできません。別の話題でお話ししましょう。"
-            else:
-                raise e
+            ai_reply_text = model.chat(
+                system_prompt=final_system_prompt,
+                history=history_messages,
+                user_message=request_data.new_message,
+                temperature=0.7,
+                max_tokens=2000
+            )
+        except Exception as e:
+            print(f"⚠️  DeepSeek API error: {str(e)}")
+            ai_reply_text = "申し訳ございません。一時的にエラーが発生しました。もう一度お試しください。"
+    
+    else:
+        # Gemini format: [{"role": "user"/"model", "parts": ["..."]}]
+        gemini_history = [
+            {
+                "role": "user",
+                "parts": [final_system_prompt]
+            },
+            {
+                "role": "model",
+                "parts": [f"了解しました。{user_display_name}さん、よろしくお願いします！"]
+            }
+        ]
         
+        for msg in limited_history:
+            gemini_history.append({
+                "role": msg.role,
+                "parts": [msg.text]
+            })
+        
+        # Call Gemini API
+        try:
+            convo = model.start_chat(history=gemini_history) # type: ignore
+            response = convo.send_message(request_data.new_message)
+            
+            # Safety filterやその他の理由でテキストが取得できない場合の処理
+            try:
+                ai_reply_text = response.text
+            except ValueError as e:
+                # finish_reason を確認
+                if hasattr(response, 'candidates') and response.candidates:
+                    finish_reason = response.candidates[0].finish_reason
+                    safety_ratings = response.candidates[0].safety_ratings if hasattr(response.candidates[0], 'safety_ratings') else None
+                    
+                    print(f"⚠️  Gemini response blocked. Finish reason: {finish_reason}")
+                    if safety_ratings:
+                        print(f"   Safety ratings: {safety_ratings}")
+                    
+                    # ユーザーフレンドリーなエラーメッセージ
+                    ai_reply_text = "申し訳ございません。その内容についてはお答えできません。別の話題でお話ししましょう。"
+                else:
+                    raise e
+        except Exception as e:
+            print(f"⚠️  Gemini API error: {str(e)}")
+            ai_reply_text = "申し訳ございません。一時的にエラーが発生しました。もう一度お試しください。"
+    
+    # チャット履歴をDBに保存
+    try:
         # ユーザーのメッセージをDBに保存
         user_log = ChatHistory(
             mate_id=request_data.mate_id,
