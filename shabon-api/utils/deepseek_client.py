@@ -103,7 +103,7 @@ class DeepSeekClient:
         """
         categories_text = "\n".join([f"- {cat}" for cat in categories])
         
-        prompt = f"""以下の会話を3-5文で要約してください。
+        prompt = f"""以下の会話を10-20文で要約してください。
 
 【抽出すべき情報】
 {categories_text}
