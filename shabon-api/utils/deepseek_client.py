@@ -38,7 +38,7 @@ class DeepSeekClient:
         system_prompt: str,
         history: List[Dict[str, str]],
         user_message: str,
-        temperature: float = 0.7,
+        temperature: float = 1.3,
         max_tokens: int = 2000
     ) -> str:
         """
