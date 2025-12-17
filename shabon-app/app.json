@@ -16,7 +16,7 @@
       },
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.shabon",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
