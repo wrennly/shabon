@@ -11,3 +11,4 @@ coverage/
 
 # iOS
 ios/
+!ios/.gitkeep

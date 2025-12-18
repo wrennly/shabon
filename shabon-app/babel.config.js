@@ -3,8 +3,7 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // Reanimated 4はBabelプラグイン不要
-      // 'react-native-reanimated/plugin',
+      'react-native-reanimated/plugin', // Reanimated 3は必須
     ],
   };
 };

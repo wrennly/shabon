@@ -1,9 +1,9 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Canvas, RoundedRect, Shader, useClock, vec } from '@shopify/react-native-skia';
+// import { Canvas, RoundedRect, Shader, useClock, vec } from '@shopify/react-native-skia';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle, Text, TextStyle, View, ActivityIndicator, Platform } from 'react-native';
 import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-import { getShabonShader } from './ShabonShader'; // 元のShabonShaderに戻す
+// import { getShabonShader } from './ShabonShader'; // 元のShabonShaderに戻す
 import { Colors } from '@/constants/theme';
 
 interface ShabonButtonProps {
@@ -46,7 +46,7 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
     borderRadius: customBorderRadius
 }) => {
     const scale = useSharedValue(1);
-    const time = useClock();
+    // const time = useClock();
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const theme = Colors[colorScheme ?? 'light'];
@@ -87,26 +87,22 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
         opacity: disabled ? 0.5 : 1.0,
     }));
 
-    const uniforms = useDerivedValue(() => {
-        if (Platform.OS === 'web') {
-            return {};
-        }
-        // Ensure layout dimensions are valid (non-zero, non-null)
-        const width = layout.width > 0 ? layout.width : 100;
-        const height = layout.height > 0 ? layout.height : 100;
-        
-        // Ensure time.value is valid
-        const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
-        
-        return {
-            iTime: timeValue / 1000,
-            iResolution: vec(width, height),
-            iIsDark: isDark ? 1.0 : 0.0,
-            iRoundness: isCircle ? 1.0 : 0.6,
-            iRainbowStrength: rainbowStrength !== undefined ? rainbowStrength : (variant === 'outline' ? 0.3 : (disabled ? 0.0 : 1.0)),
-            iFillAlpha: variant === 'outline' ? 0.0 : (disabled ? 0.3 : 0.8),
-        };
-    });
+    // const uniforms = useDerivedValue(() => {
+    //     if (Platform.OS === 'web') {
+    //         return {};
+    //     }
+    //     const width = layout.width > 0 ? layout.width : 100;
+    //     const height = layout.height > 0 ? layout.height : 100;
+    //     const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
+    //     return {
+    //         iTime: timeValue / 1000,
+    //         iResolution: vec(width, height),
+    //         iIsDark: isDark ? 1.0 : 0.0,
+    //         iRoundness: isCircle ? 1.0 : 0.6,
+    //         iRainbowStrength: rainbowStrength !== undefined ? rainbowStrength : (variant === 'outline' ? 0.3 : (disabled ? 0.0 : 1.0)),
+    //         iFillAlpha: variant === 'outline' ? 0.0 : (disabled ? 0.3 : 0.8),
+    //     };
+    // });
 
     return (
         <TouchableOpacity 
@@ -129,19 +125,13 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
                 containerStyle,
                 animatedStyle
             ]}>
-                 {Platform.OS !== 'web' && getShabonShader() && layout.width > 0 && layout.height > 0 && (
-                     <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-                        <RoundedRect 
-                            x={0} 
-                            y={0} 
-                            width={layout.width} 
-                            height={layout.height} 
-                            r={borderRadius}
-                        >
-                            <Shader source={getShabonShader()!} uniforms={uniforms as any} />
-                        </RoundedRect>
-                    </Canvas>
-                 )}
+                 {/* Skia disabled - using simple gradient instead */}
+                 <View style={[StyleSheet.absoluteFill, { 
+                     backgroundColor: variant === 'outline' ? 'transparent' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
+                     borderRadius: borderRadius,
+                     borderWidth: variant === 'outline' ? 2 : 0,
+                     borderColor: theme.tint,
+                 }]} />
                 
                 <View style={[styles.contentContainer, contentStyle]}>
                     {loading ? (
