@@ -1,9 +1,13 @@
-import { Skia } from "@shopify/react-native-skia";
+// NOTE: このShaderは将来Skiaを使う時のために保存してある
+// 現在はLinearGradientを使用中
 
-let _shader: ReturnType<typeof Skia.RuntimeEffect.Make> | null = null;
+// import { Skia } from "@shopify/react-native-skia";
+
+// let _shader: ReturnType<typeof Skia.RuntimeEffect.Make> | null = null;
 
 export const getShabonShader = () => {
-    if (!_shader && Skia) {
+    return null; // Skia未使用
+    /* if (!_shader && Skia) {
         try {
             _shader = Skia.RuntimeEffect.Make(`
 uniform float iTime;
@@ -269,10 +273,10 @@ vec4 main(vec2 fragCoord) {
     
     return vec4(finalColor * alpha, alpha);
 }
-`);
+\`);
         } catch (e) {
             console.warn("Skia RuntimeEffect creation failed (likely due to uninitialized CanvasKit):", e);
         }
     }
-    return _shader;
+    return _shader; */
 };

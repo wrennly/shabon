@@ -1,6 +1,9 @@
-import { Skia } from "@shopify/react-native-skia";
+// NOTE: このShaderは将来Skiaを使う時のために保存してある
+// 現在はLinearGradientとBlurViewを使用中
 
-let _shader: ReturnType<typeof Skia.RuntimeEffect.Make> | null = null;
+// import { Skia } from "@shopify/react-native-skia";
+
+// let _shader: ReturnType<typeof Skia.RuntimeEffect.Make> | null = null;
 
 /**
  * iOS 26 Liquid Glass シェーダー（物理ベース実装）
@@ -13,7 +16,8 @@ let _shader: ReturnType<typeof Skia.RuntimeEffect.Make> | null = null;
  * 5. スペキュラハイライト（鏡面反射）
  */
 export const getLiquidGlassShader = () => {
-    if (!_shader && Skia) {
+    return null; // Skia未使用
+    /* if (!_shader && Skia) {
         try {
             _shader = Skia.RuntimeEffect.Make(`
 uniform float iTime;
@@ -243,11 +247,11 @@ vec4 main(vec2 fragCoord) {
     
     return vec4(color * alpha, alpha);
 }
-`);
+\`);
         } catch (e) {
             console.warn("LiquidGlassShader creation failed:", e);
         }
     }
-    return _shader;
+    return _shader; */
 };
 

@@ -188,15 +188,20 @@ export default function LoginScreen() {
           </View>
         )}
 
-        {/* テストユーザーログイン（開発用） */}
-        {__DEV__ && (
-          <Pressable onPress={handleTestLogin} disabled={testLoginLoading} style={[styles.glassButtonWrapper, { marginTop: 24 }]}>
+        {/* テストユーザーログイン（TestFlight用） */}
+        <Pressable onPress={handleTestLogin} disabled={testLoginLoading} style={[styles.glassButtonWrapper, { marginTop: 24 }]}>
+          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+            <GlassView style={styles.glassButton} isInteractive>
+              <Ionicons name="person-outline" size={20} color={theme.glassText} />
+              <Text style={[styles.glassButtonText, { color: theme.glassText, fontSize: 14 }]}>テストユーザー</Text>
+            </GlassView>
+          ) : (
             <View style={[styles.fallbackButton, { backgroundColor: 'rgba(128,128,128,0.3)' }]}>
               <Ionicons name="person-outline" size={20} color={theme.text} />
               <Text style={[styles.glassButtonText, { color: theme.text, fontSize: 14 }]}>テストユーザー</Text>
             </View>
-          </Pressable>
-        )}
+          )}
+        </Pressable>
       </View>
     </View>
   );

@@ -1,9 +1,8 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
-// import { Canvas, RoundedRect, Shader, useClock, vec } from '@shopify/react-native-skia';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, ViewStyle, Text, TextStyle, View, ActivityIndicator, Platform } from 'react-native';
-import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-// import { getShabonShader } from './ShabonShader'; // 元のShabonShaderに戻す
+import { StyleSheet, TouchableOpacity, ViewStyle, Text, TextStyle, View, ActivityIndicator } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/theme';
 
 interface ShabonButtonProps {
@@ -42,31 +41,24 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
     loading = false,
     disabled = false,
     disablePressAnimation = false,
-    rainbowStrength,
+    rainbowStrength = 1.0,
     borderRadius: customBorderRadius
 }) => {
     const scale = useSharedValue(1);
-    // const time = useClock();
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const theme = Colors[colorScheme ?? 'light'];
 
     // Determine dimensions
-    // If size is provided, it's a circle. Otherwise use width/height.
     const isCircle = size !== undefined;
     const finalWidth = isCircle ? size : (width ?? '100%');
     const finalHeight = isCircle ? size : height;
-    const borderRadius = customBorderRadius ?? (isCircle ? size / 2 : 12); // iOS style radius
-
-    // For shader resolution, we need concrete numbers. 
-    // If width is a string (percentage), we might need a layout measurement.
-    // For simplicity in this version, if width is string, we assume a default for shader aspect ratio
-    // or we can use a fixed large enough canvas.
-    // Let's use a layout state for accurate shader rendering if needed, 
-    // but for now let's assume width is number or fallback to 300 for shader res.
-    const initialWidth = isCircle ? (size || 70) : 300;
-    const initialHeight = finalHeight || 50;
-    const [layout, setLayout] = React.useState({ width: initialWidth, height: initialHeight });
+    const borderRadius = customBorderRadius ?? (isCircle ? size / 2 : 12);
+    
+    // シャボン玉カラー（パステル調の虹色）
+    const shabonColors = isDark 
+        ? ['rgba(180,200,255,0.3)', 'rgba(255,180,255,0.3)', 'rgba(200,180,255,0.3)', 'rgba(180,220,255,0.3)'] as const
+        : ['rgba(200,220,255,0.4)', 'rgba(255,200,255,0.4)', 'rgba(220,200,255,0.4)', 'rgba(200,240,255,0.4)'] as const;
 
     const handlePress = () => {
         if (disabled || loading) return;
@@ -87,51 +79,67 @@ export const ShabonButton: React.FC<ShabonButtonProps> = ({
         opacity: disabled ? 0.5 : 1.0,
     }));
 
-    // const uniforms = useDerivedValue(() => {
-    //     if (Platform.OS === 'web') {
-    //         return {};
-    //     }
-    //     const width = layout.width > 0 ? layout.width : 100;
-    //     const height = layout.height > 0 ? layout.height : 100;
-    //     const timeValue = (time && time.value !== undefined && time.value !== null) ? time.value : 0;
-    //     return {
-    //         iTime: timeValue / 1000,
-    //         iResolution: vec(width, height),
-    //         iIsDark: isDark ? 1.0 : 0.0,
-    //         iRoundness: isCircle ? 1.0 : 0.6,
-    //         iRainbowStrength: rainbowStrength !== undefined ? rainbowStrength : (variant === 'outline' ? 0.3 : (disabled ? 0.0 : 1.0)),
-    //         iFillAlpha: variant === 'outline' ? 0.0 : (disabled ? 0.3 : 0.8),
-    //     };
-    // });
-
     return (
         <TouchableOpacity 
             onPress={handlePress} 
             activeOpacity={1}
             disabled={disabled || loading}
             style={[
-                { width: finalWidth as any, height: finalHeight }, // Always set dimensions
+                { width: finalWidth as any, height: finalHeight },
                 style
             ]}
-            onLayout={(e) => setLayout({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
         >
             <Animated.View style={[
                 styles.container, 
                 { 
                     width: '100%', 
-                    height: '100%', // Use 100% to fill TouchableOpacity
+                    height: '100%',
                     borderRadius: borderRadius 
                 }, 
                 containerStyle,
                 animatedStyle
             ]}>
-                 {/* Skia disabled - using simple gradient instead */}
-                 <View style={[StyleSheet.absoluteFill, { 
-                     backgroundColor: variant === 'outline' ? 'transparent' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
-                     borderRadius: borderRadius,
-                     borderWidth: variant === 'outline' ? 2 : 0,
-                     borderColor: theme.tint,
-                 }]} />
+                {/* シャボン玉グラデーション背景 */}
+                {variant !== 'outline' && rainbowStrength > 0 && (
+                    <LinearGradient
+                        colors={shabonColors}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[StyleSheet.absoluteFill, { 
+                            borderRadius: borderRadius,
+                            opacity: disabled ? 0.3 : rainbowStrength
+                        }]}
+                    />
+                )}
+                
+                {/* ベース背景 */}
+                <View style={[StyleSheet.absoluteFill, { 
+                    backgroundColor: variant === 'outline' ? 'transparent' : (isDark ? 'rgba(224,224,224,0.15)' : 'rgba(224,224,224,0.2)'),
+                    borderRadius: borderRadius,
+                    borderWidth: variant === 'outline' ? 2 : 0,
+                    borderColor: theme.tint,
+                }]} />
+                
+                {/* 左上ハイライト（ガラス感） */}
+                {variant !== 'outline' && (
+                    <View style={[StyleSheet.absoluteFill, { 
+                        borderRadius: borderRadius,
+                        overflow: 'hidden'
+                    }]}>
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.4)', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 0.5, y: 0.5 }}
+                            style={{ 
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '60%',
+                                height: '60%',
+                            }}
+                        />
+                    </View>
+                )}
                 
                 <View style={[styles.contentContainer, contentStyle]}>
                     {loading ? (

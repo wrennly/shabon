@@ -7,7 +7,7 @@
     "icon": "./assets/images/Icon-iOS-Default-1024x1024@1x.png",
     "scheme": "Shabon",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    
     "ios": {
       "icon": {
         "dark": "./assets/images/Icon-iOS-Dark-1024x1024@1x.png",
@@ -16,9 +16,17 @@
       },
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.shabon",
-      "buildNumber": "17",
+      "buildNumber": "37",
+      "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.430237777159-vneousum2noilu1b82irbgftkd4efdld"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -44,7 +52,7 @@
         "expo-build-properties",
         {
           "ios": {
-            "newArchEnabled": false,
+            "newArchEnabled": true,
             "deploymentTarget": "15.1"
           }
         }

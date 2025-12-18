@@ -30,15 +30,6 @@ module.exports = ({ config }) => {
           },
         ],
       ] : []),
-      // iOS 17+ デプロイメントターゲット設定（Liquid Glass 用）
-      [
-        'expo-build-properties',
-        {
-          ios: {
-            deploymentTarget: '17.0',
-          },
-        },
-      ],
       // ローカルモジュール（虹色タブバー用）
       require('./modules/liquid-glass/app.plugin.js'),
     ],
