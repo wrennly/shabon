@@ -16,7 +16,7 @@
       },
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.shabon",
-      "buildNumber": "6",
+      "buildNumber": "12",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -58,7 +58,7 @@
       "reactCompiler": true
     },
     "updates": {
-      "enabled": false,
+      "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/a8629c36-0e43-4cd8-b2f2-f8d4bcbe5ca1"
