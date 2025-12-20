@@ -125,41 +125,41 @@ export const ShabonSelect: React.FC<ShabonSelectProps> = ({
                                 intensity={80} 
                                 tint="light"
                                 style={[styles.blurModalContainer, { height: Math.min(options.length * 50 + 20, 400) }]}
-                            >
-                                <FlatList
-                                    data={options}
-                                    keyExtractor={(item) => item.value}
-                                    contentContainerStyle={{ padding: 10 }}
-                                    showsVerticalScrollIndicator={false}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.optionItem,
-                                                { 
-                                                    backgroundColor: item.value === value ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') : 'transparent',
-                                                    borderRadius: 12,
-                                                    marginBottom: 4
-                                                }
-                                            ]}
-                                            onPress={() => {
+                        >
+                            <FlatList
+                                data={options}
+                                keyExtractor={(item) => item.value}
+                                contentContainerStyle={{ padding: 10 }}
+                                showsVerticalScrollIndicator={false}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.optionItem,
+                                            { 
+                                                backgroundColor: item.value === value ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') : 'transparent',
+                                                borderRadius: 12,
+                                                marginBottom: 4
+                                            }
+                                        ]}
+                                        onPress={() => {
                                                 // 選択済みなら解除、未選択なら選択
                                                 onSelect(item.value === value ? '' : item.value);
-                                                setVisible(false);
-                                            }}
-                                        >
-                                            <Text style={[
-                                                styles.optionText, 
-                                                { 
-                                                    color: isDark ? '#FFF' : '#333',
-                                                    fontWeight: item.value === value ? 'bold' : 'normal'
-                                                }
-                                            ]}>
-                                                {item.label}
-                                            </Text>
-                                            {item.value === value && <Text style={{ color: isDark ? '#FFF' : '#333' }}>✓</Text>}
-                                        </TouchableOpacity>
-                                    )}
-                                />
+                                            setVisible(false);
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.optionText, 
+                                            { 
+                                                color: isDark ? '#FFF' : '#333',
+                                                fontWeight: item.value === value ? 'bold' : 'normal'
+                                            }
+                                        ]}>
+                                            {item.label}
+                                        </Text>
+                                        {item.value === value && <Text style={{ color: isDark ? '#FFF' : '#333' }}>✓</Text>}
+                                    </TouchableOpacity>
+                                )}
+                            />
                             </BlurView>
                         )}
                     </View>

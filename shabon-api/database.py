@@ -16,8 +16,12 @@ if not DATABASE_URL:
 # pool_recycle=300 prevents connection timeout on Render
 engine = create_engine(
     DATABASE_URL,
-    pool_recycle=300,        # avoid stale connections
-    pool_pre_ping=True       # auto test & reconnect dropped connections
+    pool_size=10,            # Maximum number of connections to keep in the pool
+    max_overflow=20,         # Maximum number of connections that can be created beyond pool_size
+    pool_timeout=60,         # Timeout for getting a connection from the pool (seconds)
+    pool_recycle=300,        # Recycle connections after 5 minutes to avoid stale connections
+    pool_pre_ping=True,      # Test connections before using them
+    echo=False               # Set to True for SQL query logging (debugging)
 )
 
 # Session factory for database connections

@@ -1,5 +1,6 @@
 export * from './ShabonBackground';
 export * from './ShabonButton';
+export * from './ShabonTabButton';
 export * from './ShabonInput';
 export * from './ShabonSelect';
 export * from './ShabonSwitch';

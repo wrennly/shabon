@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logToDiscord, logErrorToDiscord } from '@/utils/discord-logger';
 
 const isLoggedIn = async (): Promise<boolean> => {
   try {
@@ -41,34 +42,67 @@ export const authService = {
    */
   signInWithGoogle: async (idToken: string) => {
     try {
+      await logToDiscord('[authService] signInWithGoogle呼び出し', {
+        tokenLength: idToken.length,
+        tokenPreview: idToken.substring(0, 30) + '...',
+      });
+
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
 
-      if (error) throw error;
+      if (error) {
+        await logErrorToDiscord('[authService] Supabase認証エラー（Google）', error);
+        throw error;
+      }
+      
+      await logToDiscord('[authService] Supabase認証成功（Google）', {
+        userId: data.user?.id,
+        email: data.user?.email,
+        provider: data.user?.app_metadata?.provider,
+      });
+      
       return data;
     } catch (error) {
-      console.error('Google Sign-in error:', error);
+      await logErrorToDiscord('[authService] Google Sign-in例外', error);
       throw error;
     }
   },
 
   /**
    * Sign in with Apple Identity Token
+   * @param identityToken - The identity token from Apple
+   * @param nonce - The raw (unhashed) nonce that was used to generate the hashed nonce sent to Apple
    */
   signInWithApple: async (identityToken: string, nonce: string) => {
     try {
+      await logToDiscord('[authService] signInWithApple呼び出し', {
+        tokenLength: identityToken.length,
+        rawNonce: nonce,
+        tokenPreview: identityToken.substring(0, 30) + '...',
+      });
+
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: identityToken,
-        nonce: nonce,
+        nonce: nonce, // Pass the RAW nonce to Supabase
       });
 
-      if (error) throw error;
+      if (error) {
+        await logErrorToDiscord('[authService] Supabase認証エラー', error);
+        throw error;
+      }
+      
+      await logToDiscord('[authService] Supabase認証成功', {
+        userId: data.user?.id,
+        email: data.user?.email,
+        provider: data.user?.app_metadata?.provider,
+      });
+      
       return data;
     } catch (error) {
-      console.error('Apple Sign-in error:', error);
+      await logErrorToDiscord('[authService] Apple Sign-in例外', error);
       throw error;
     }
   },

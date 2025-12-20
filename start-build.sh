@@ -25,3 +25,17 @@ npm run update:rollback
 # サブミット
 cd /Users/ken/dev/shabon/shabon-app
 npx eas submit --platform ios --latest
+
+# ローカルビルド
+cd /Users/ken/dev/shabon/shabon-app
+eas build --profile development --platform ios --local
+
+
+# ローカルビルドを実行
+npx expo start --dev-client
+
+# ローカルビルドを実行
+npx expo run:ios
+
+# ローカルビルドを実行
+npx expo run:android

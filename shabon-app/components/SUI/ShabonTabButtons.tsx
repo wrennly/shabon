@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ShabonButton } from './ShabonButton';
+import { ShabonTabButton } from './ShabonTabButton';
 import { Colors } from '@/constants/theme';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
@@ -57,19 +57,17 @@ const TabButtonWrapper = ({
                     style={styles.glassCircle}
                     isInteractive={true}
                 >
-                    <ShabonButton
+                    <ShabonTabButton
                         size={70}
                         onPress={() => onPress(tab.key)}
-                        icon={
-                            <Ionicons 
-                                name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
-                                size={28} 
-                                color={isActive ? (isDark ? ACTIVE_COLOR_DARK : ACTIVE_COLOR_LIGHT) : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
-                            />
-                        }
-                        variant={isActive ? 'primary' : 'secondary'}
-                        rainbowStrength={isActive ? 2.0 : 0.0}
-                    />
+                        isActive={isActive}
+                    >
+                        <Ionicons 
+                            name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
+                            size={28} 
+                            color={isActive ? (isDark ? ACTIVE_COLOR_DARK : ACTIVE_COLOR_LIGHT) : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
+                        />
+                    </ShabonTabButton>
                 </GlassView>
             ) : (
                 <BlurView
@@ -77,19 +75,17 @@ const TabButtonWrapper = ({
                     tint={isDark ? 'dark' : 'light'}
                     style={styles.blurCircle}
                 >
-                    <ShabonButton
+                    <ShabonTabButton
                         size={70}
                         onPress={() => onPress(tab.key)}
-                        icon={
-                            <Ionicons 
-                                name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
-                                size={28} 
-                                color={isActive ? (isDark ? ACTIVE_COLOR_DARK : ACTIVE_COLOR_LIGHT) : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
-                            />
-                        }
-                        variant={isActive ? 'primary' : 'secondary'}
-                        rainbowStrength={isActive ? 2.0 : 0.0}
-                    />
+                        isActive={isActive}
+                    >
+                        <Ionicons 
+                            name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} 
+                            size={28} 
+                            color={isActive ? (isDark ? ACTIVE_COLOR_DARK : ACTIVE_COLOR_LIGHT) : (isDark ? INACTIVE_COLOR_DARK : INACTIVE_COLOR_LIGHT)} 
+                        />
+                    </ShabonTabButton>
                 </BlurView>
             )}
         </View>

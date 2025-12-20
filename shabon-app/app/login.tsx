@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -17,6 +18,7 @@ import { authService } from '@/services/auth';
 import { apiClient } from '@/services/api';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { resetHeaderAnimation, prepareHeaderAnimation } from '@/components/app-header';
+import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -49,18 +51,30 @@ export default function LoginScreen() {
     resetHeaderAnimation();
     
     try {
+      await logToDiscord('🔄 ログイン後の処理開始', { action: 'navigateAfterLogin' });
+      
+      await logToDiscord('📡 /users/me APIコール開始');
       const response = await apiClient.get('/users/me');
       const user = response.data;
       
+      await logToDiscord('✅ /users/me APIレスポンス取得', {
+        hasDisplayName: !!user.display_name,
+        displayName: user.display_name,
+        userId: user.id,
+      });
+      
       // display_name が未設定なら初回登録画面へ
       if (!user.display_name || user.display_name.trim() === '') {
+        await logToDiscord('➡️ オンボーディング画面へ遷移');
         router.replace('/onboarding');
       } else {
+        await logToDiscord('➡️ チャット画面へ遷移');
         router.replace('/(tabs)/chat');
       }
-    } catch (error) {
-      console.error('Failed to check user status:', error);
+    } catch (error: any) {
+      await logErrorToDiscord('❌ ログイン後の処理でエラー', error);
       // エラー時はとりあえずチャット画面へ
+      await logToDiscord('⚠️ エラーのためチャット画面へ遷移');
       router.replace('/(tabs)/chat');
     }
   };
@@ -68,15 +82,32 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
+      
+      await logToDiscord('🔵 Google Sign-In開始');
+      
       const result = await promptAsync();
+      
+      await logToDiscord('📥 Google認証結果を受信', {
+        type: result?.type,
+        hasIdToken: !!result?.authentication?.idToken,
+        hasAccessToken: !!result?.authentication?.accessToken,
+      });
 
       if (result?.type === 'success' && result.authentication?.idToken) {
+        await logToDiscord('📤 Supabaseに送信開始', {
+          tokenPreview: result.authentication.idToken.substring(0, 30) + '...',
+        });
+        
         await authService.signInWithGoogle(result.authentication.idToken);
+        
+        await logSuccessToDiscord('Google Sign-In成功！');
         await navigateAfterLogin();
       } else {
+        await logToDiscord('ℹ️ Google認証キャンセルまたは失敗', { resultType: result?.type });
         setLoading(false);
       }
     } catch (error: any) {
+      await logErrorToDiscord('Google Sign-In失敗', error);
       setLoading(false);
       Alert.alert('Googleログインに失敗しました', error.message);
     }
@@ -110,22 +141,61 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
+      
+      await logToDiscord('🍎 Apple Sign-In開始');
+      
+      // Generate random nonce
+      const rawNonce = Math.random().toString(36).substring(2, 10) + 
+                       Math.random().toString(36).substring(2, 10);
+      
+      await logToDiscord('📝 Nonce生成完了', { rawNonce });
+      
+      // Hash the nonce with SHA256
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+      
+      await logToDiscord('🔐 Nonce ハッシュ化完了', { hashedNonce: hashedNonce.substring(0, 20) + '...' });
+      
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce, // Pass HASHED nonce to Apple
+      });
+
+      await logToDiscord('✅ Appleから認証情報を取得', {
+        hasIdentityToken: !!credential.identityToken,
+        tokenLength: credential.identityToken?.length,
+        email: credential.email,
+        fullName: credential.fullName,
       });
 
       if (!credential.identityToken) {
         throw new Error('Apple認証に失敗しました');
       }
 
-      await authService.signInWithApple(credential.identityToken, credential.authorizationCode ?? '');
+      await logToDiscord('📤 Supabaseに送信開始', {
+        rawNonce,
+        tokenPreview: credential.identityToken.substring(0, 30) + '...',
+      });
+      
+      const result = await authService.signInWithApple(credential.identityToken, rawNonce);
+      
+      await logSuccessToDiscord('Apple Sign-In成功！', {
+        userId: result.user?.id,
+        email: result.user?.email,
+      });
+      
       await navigateAfterLogin();
     } catch (error: any) {
       if (error.code !== 'ERR_CANCELED') {
+        await logErrorToDiscord('Apple Sign-In失敗', error);
         Alert.alert('Appleログインに失敗しました', error.message);
+      } else {
+        await logToDiscord('ℹ️ ユーザーがキャンセル');
       }
       setLoading(false);
     }

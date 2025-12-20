@@ -9,6 +9,7 @@ import { Colors } from '@/constants/theme';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
+import { logToDiscord, logErrorToDiscord } from '@/utils/discord-logger';
 
 import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 
@@ -58,6 +59,8 @@ export default function MatesScreen() {
 
   const loadMates = async (forceRefresh = false) => {
     try {
+      await logToDiscord('📋 loadMates開始', { forceRefresh });
+      
       // キャッシュチェック
       const now = Date.now();
       const cacheValid = cacheRef.current.data && 
@@ -65,6 +68,7 @@ export default function MatesScreen() {
       
       if (cacheValid && !forceRefresh) {
         // キャッシュから即座に表示（ローディングなし）
+        await logToDiscord('💾 キャッシュから表示', { matesCount: cacheRef.current.data!.length });
         setMates(cacheRef.current.data!);
         setLoading(false);
         setRefreshing(false);
@@ -76,7 +80,10 @@ export default function MatesScreen() {
         setLoading(true);
       }
       
+      await logToDiscord('📡 /mates/ APIコール開始');
       const response = await apiClient.get('/mates/?filter=chatted_only');
+      
+      await logToDiscord('✅ /mates/ APIレスポンス取得', { matesCount: response.data.length });
       
       // Sort by last_chat_time (newest first)
       const sortedMates = response.data.sort((a: Mate, b: Mate) => {
@@ -93,8 +100,9 @@ export default function MatesScreen() {
         timestamp: now
       };
     } catch (error: any) {
-      console.error('Failed to load mates:', error);
+      await logErrorToDiscord('❌ loadMatesでエラー', error);
       if (error.response?.status === 401) {
+        await logToDiscord('🔐 401エラー - ログイン画面へ');
         router.replace('/login');
       }
     } finally {

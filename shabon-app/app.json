@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/Icon-iOS-Default-1024x1024@1x.png",
-    "scheme": "Shabon",
+    "scheme": "shabon",
     "userInterfaceStyle": "automatic",
     
     "ios": {
@@ -15,7 +15,7 @@
         "tinted": "./assets/images/Icon-iOS-Tinted-1024x1024@1x.png"
       },
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.shabon",
+      "bundleIdentifier": "com.looseandkeen.shabon",
       "buildNumber": "37",
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -23,7 +23,7 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.430237777159-vneousum2noilu1b82irbgftkd4efdld"
+              "com.googleusercontent.apps.430237777159-4numa0urvs9vpbts7h9tcbr1ats70ngj"
             ]
           }
         ]

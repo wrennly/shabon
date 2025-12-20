@@ -17,6 +17,7 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
 
 interface AttributeOption {
   value: string;
@@ -191,10 +192,22 @@ export default function MateEditorScreen() {
   const uploadImage = async (uri: string, mateId: number) => {
     setImageUploading(true);
     try {
+      await logToDiscord('📸 画像アップロード開始', { 
+        uri: uri.substring(0, 50) + '...', 
+        mateId,
+        platform: Platform.OS 
+      });
+      
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'image.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      await logToDiscord('📦 FormData準備完了', { 
+        filename, 
+        type,
+        processedUri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri
+      });
 
       formData.append('file', {
         uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
@@ -202,17 +215,23 @@ export default function MateEditorScreen() {
         type,
       } as any);
 
-      const response = await apiClient.post(`/mates/${mateId}/image`, formData, {
+      await logToDiscord('📡 /mates/{id}/upload-image APIコール開始', { endpoint: `/mates/${mateId}/upload-image` });
+      
+      const response = await apiClient.post(`/mates/${mateId}/upload-image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+      });
+
+      await logSuccessToDiscord('✅ 画像アップロード成功', { 
+        imageUrl: response.data.image_url 
       });
 
       if (response.data.image_url) {
         setImageUri(response.data.image_url);
       }
     } catch (error: any) {
-      console.error('Image upload failed:', error);
+      await logErrorToDiscord('❌ 画像アップロード失敗', error);
       Alert.alert('エラー', '画像のアップロードに失敗しました');
     } finally {
       setImageUploading(false);
