@@ -20,15 +20,14 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # Dependency injection placeholder (will be set by main.py)
 get_current_user = None
 
-def current_user_dependency(
+async def current_user_dependency(
     authorization: Optional[str] = Header(None),
     session: Session = Depends(get_session)
 ):
     """Dependency wrapper that calls the injected get_current_user function"""
     if get_current_user is None:
         raise HTTPException(status_code=500, detail="get_current_user not initialized")
-    import asyncio
-    return asyncio.run(get_current_user(authorization, session))
+    return await get_current_user(authorization, session)
 
 @router.post("/cache/clear")
 def clear_cache(admin_key: str = Query(...)):

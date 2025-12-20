@@ -38,16 +38,14 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-def current_user_dependency(
+async def current_user_dependency(
     authorization: Optional[str] = Header(None),
     session: Session = Depends(get_session)
 ):
     """Dependency wrapper that calls the injected get_current_user function"""
     if get_current_user is None:
         raise HTTPException(status_code=500, detail="get_current_user not initialized")
-    # Call the actual function with proper imports
-    import asyncio
-    return asyncio.run(get_current_user(authorization, session))
+    return await get_current_user(authorization, session)
 
 def _make_query_cache_key(*args) -> str:
     """クエリキャッシュキー生成"""
