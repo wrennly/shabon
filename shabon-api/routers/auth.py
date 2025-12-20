@@ -97,13 +97,16 @@ def delete_user_account(
         # Delete user (logical deletion)
         current_user.is_deleted = True
         
-        # For Google users, mark username with "deleted_"
+        # Mark username with "deleted_" prefix and timestamp
         # （username の unique 制約を避けるため、タイムスタンプを付ける）
-        # メールアドレス形式（@を含む）= Google ユーザー
+        # 50文字制限に収まるように調整
         old_username = current_user.username
-        if "@" in current_user.username:
-            current_user.username = f"deleted_{current_user.username}_{int(time.time())}"
-            log_to_discord(f"📝 [API] ユーザー名変更: {old_username} → {current_user.username}")
+        timestamp = int(time.time())
+        # "deleted_" (8文字) + timestamp (10文字) = 18文字を確保
+        max_username_length = 50 - 18
+        truncated_username = old_username[:max_username_length]
+        current_user.username = f"deleted_{timestamp}_{truncated_username}"
+        log_to_discord(f"📝 [API] ユーザー名変更: {old_username} → {current_user.username}")
         
         session.add(current_user)
         session.commit()
