@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 import { useIsFocused } from '@react-navigation/native';
+import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
 
 interface Mate {
   id: number;
@@ -114,9 +115,18 @@ export default function ExploreScreen() {
 
   const loadPublicMates = async () => {
     try {
+      await logToDiscord('🌍 公開メイト取得開始');
+      
       const response = await apiClient.get('/mates/public');
+      
+      await logSuccessToDiscord('✅ 公開メイト取得成功', {
+        count: response.data.length,
+        mates: response.data.map((m: any) => ({ id: m.id, name: m.mate_name, is_public: m.is_public }))
+      });
+      
       setPublicMates(response.data);
     } catch (error: any) {
+      await logErrorToDiscord('🔴 ERROR: 公開メイト取得失敗', error);
       console.error('Failed to load public mates:', error);
       if (error.response?.status === 401) {
         router.replace('/login');

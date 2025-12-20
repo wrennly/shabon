@@ -24,6 +24,7 @@ from utils.cache import (
     get_cached_query_result, set_cached_query_result,
     PUBLIC_MATES_CACHE_TTL
 )
+from utils.discord_logger import log_to_discord, log_error_to_discord, log_success_to_discord
 
 # Router setup
 router = APIRouter(prefix="/mates", tags=["mates"])
@@ -344,12 +345,15 @@ def get_public_mates(
 ):
     """Get all public AI mates with pagination and query caching"""
     
+    log_to_discord(f"🌍 [API] 公開メイト取得開始", {"skip": skip, "limit": limit})
+    
     # Check cache first
     cache_key = _make_query_cache_key("public_mates", skip, limit)
     cached_result = get_cached_query_result(cache_key, PUBLIC_MATES_CACHE_TTL)
     
     if cached_result is not None:
         print(f"📊 Using cached result for public_mates (skip={skip}, limit={limit})")
+        log_to_discord(f"💾 [API] キャッシュから返却", {"count": len(cached_result)})
         return [
             MateInfoResponse(
                 id=item["id"],
@@ -364,6 +368,7 @@ def get_public_mates(
         ]
     
     print(f"📊 Cache miss for public_mates - fetching from DB")
+    log_to_discord(f"🔍 [API] キャッシュミス - DBから取得")
     
     # Fetch public mates with pagination, ordered by conversation count (popularity)
     # サブクエリで各メイトの会話数をカウント
@@ -391,7 +396,10 @@ def get_public_mates(
         .limit(limit)
     ).all()
     
+    log_to_discord(f"📊 [API] DB取得完了", {"count": len(public_mates)})
+    
     if not public_mates:
+        log_to_discord(f"⚠️ [API] 公開メイトが0件")
         return []
 
     # Fetch all settings for these mates in a single query
@@ -455,6 +463,11 @@ def get_public_mates(
         for item in response_list
     ]
     set_cached_query_result(cache_key, cache_data, PUBLIC_MATES_CACHE_TTL)
+    
+    log_success_to_discord(f"✅ [API] 公開メイト返却", {
+        "count": len(response_list),
+        "mates": [{"id": m.id, "name": m.mate_name} for m in response_list]
+    })
     
     return response_list
 
