@@ -11,6 +11,7 @@ import { Colors } from '@/constants/theme';
 import { apiClient } from '@/services/api';
 import { PRIVACY_POLICY } from '@/constants/legal';
 import { resetHeaderAnimation } from '@/components/app-header';
+import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
 
 export default function OnboardingScreen() {
   const colorScheme = useColorScheme();
@@ -36,17 +37,23 @@ export default function OnboardingScreen() {
 
     try {
       setSaving(true);
+      await logToDiscord('📝 オンボーディング登録開始', { displayName: displayName.trim() });
+      
       // バックエンドにユーザー情報を更新
       await apiClient.put('/users/me', {
         display_name: displayName.trim(),
       });
       
+      await logSuccessToDiscord('✅ オンボーディング登録成功', { displayName: displayName.trim() });
+      
       // チャット画面のヘッダーアニメーションをリセット
       resetHeaderAnimation();
       
       // チャット画面へ遷移
+      await logToDiscord('➡️ チャット画面へ遷移');
       router.replace('/(tabs)/chat');
     } catch (error: any) {
+      await logErrorToDiscord('🔴 ERROR: オンボーディング登録失敗', error);
       console.error('Registration failed:', error);
       Alert.alert('エラー', '登録に失敗しました。もう一度お試しください。');
     } finally {

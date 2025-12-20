@@ -10,12 +10,12 @@ import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [profile, setProfile] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,16 +28,24 @@ export default function ProfileScreen() {
 
   const loadProfile = async () => {
     try {
+      await logToDiscord('👤 プロフィール読み込み開始');
+      
       // バックエンドからユーザー情報を取得（display_name, profileはここに保存されている）
+      await logToDiscord('📡 /users/me API呼び出し');
       const response = await apiClient.get('/users/me');
       const backendUser = response.data;
+      await logSuccessToDiscord('✅ バックエンドからユーザー情報取得成功', {
+        display_name: backendUser.display_name,
+        username: backendUser.username,
+        hasProfile: !!backendUser.profile
+      });
+      
       setUsername(backendUser.display_name || '');
       setProfile(backendUser.profile || '');
       
-      // メールアドレスはSupabaseから取得
-      const supabaseUser = await authService.getUser();
-      setEmail(supabaseUser?.email || backendUser.username || '');
+      await logSuccessToDiscord('✅ プロフィール読み込み完了');
     } catch (error) {
+      await logErrorToDiscord('🔴 ERROR: プロフィール読み込み失敗', error);
       console.error('Failed to load profile:', error);
     } finally {
       setLoading(false);
@@ -92,13 +100,23 @@ export default function ProfileScreen() {
   const confirmDeleteAccount = async () => {
     try {
       setDeleting(true);
+      await logToDiscord('🗑️ 退会処理開始');
+      
       // バックエンドで論理削除
+      await logToDiscord('📡 /users/me DELETE API呼び出し');
       await apiClient.delete('/users/me');
+      await logSuccessToDiscord('✅ バックエンド退会処理成功');
+      
       // Supabaseからサインアウト
+      await logToDiscord('📡 Supabaseサインアウト開始');
       await authServiceLogout.signOut();
+      await logSuccessToDiscord('✅ Supabaseサインアウト成功');
+      
       // ログイン画面へ
+      await logToDiscord('➡️ ログイン画面へ遷移');
       router.replace('/login');
     } catch (error) {
+      await logErrorToDiscord('🔴 ERROR: 退会処理失敗', error);
       console.error('Failed to delete account:', error);
       Alert.alert('エラー', '退会処理に失敗しました。もう一度お試しください。');
     } finally {
@@ -144,16 +162,6 @@ export default function ProfileScreen() {
           value={username}
           onChangeText={setUsername}
           placeholder="メイトが呼ぶ名前"
-        />
-
-        <ShabonInput
-          label="メールアドレス"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholder="未設定"
-          editable={false}
         />
 
         <ShabonInput

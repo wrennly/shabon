@@ -13,6 +13,7 @@ from models import (
     Users, AiMates,
     UserResponse, UserProfileUpdateRequest
 )
+from utils.discord_logger import log_to_discord, log_error_to_discord, log_success_to_discord
 
 # Router setup
 router = APIRouter(tags=["auth"])
@@ -73,6 +74,11 @@ def delete_user_account(
 ):
     """User account withdrawal (logical deletion)"""
     print(f"「{current_user.username}」のユーザーを退会処理するよ！")
+    log_to_discord(f"🗑️ [API] 退会処理開始", {
+        "user_id": current_user.id,
+        "username": current_user.username,
+        "supabase_uid": current_user.supabase_uid
+    })
     
     try:
         # Delete all user's AI mates (logical deletion)
@@ -80,9 +86,13 @@ def delete_user_account(
             select(AiMates).where(AiMates.user_id == current_user.id)
         ).all()
         
+        log_to_discord(f"📋 [API] ユーザーのメイト数: {len(user_mates)}")
+        
         for mate in user_mates:
             mate.is_deleted = True
             session.add(mate)
+        
+        log_success_to_discord(f"✅ [API] メイト削除完了: {len(user_mates)}件")
         
         # Delete user (logical deletion)
         current_user.is_deleted = True
@@ -90,11 +100,18 @@ def delete_user_account(
         # For Google users, mark username with "deleted_"
         # （username の unique 制約を避けるため、タイムスタンプを付ける）
         # メールアドレス形式（@を含む）= Google ユーザー
+        old_username = current_user.username
         if "@" in current_user.username:
             current_user.username = f"deleted_{current_user.username}_{int(time.time())}"
+            log_to_discord(f"📝 [API] ユーザー名変更: {old_username} → {current_user.username}")
         
         session.add(current_user)
         session.commit()
+        
+        log_success_to_discord(f"✅ [API] 退会処理完了", {
+            "user_id": current_user.id,
+            "is_deleted": current_user.is_deleted
+        })
         
         print("ユーザーを退会処理しました！さようなら～")
         return {
@@ -104,5 +121,6 @@ def delete_user_account(
         
     except Exception as e:
         session.rollback()
+        log_error_to_discord(f"🔴 [API] 退会処理エラー", e)
         raise HTTPException(status_code=500, detail=f"退会処理エラー: {str(e)}")
 
