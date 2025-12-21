@@ -45,10 +45,10 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
 
   // 画面がフォーカスされた時に、既に再生済みならマウントする
   useEffect(() => {
-    if (hasPlayedGlobal && !shouldMount) {
+    if (hasPlayedGlobal && !shouldMount && showLogo) {
       setShouldMount(true);
     }
-  }, []);
+  }, [showLogo, shouldMount]);
 
   // アニメーション再生イベントを受け取る（ログイン後のみ）
   useEffect(() => {
