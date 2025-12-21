@@ -91,7 +91,7 @@ def create_mate(
             mate_id = generate_mate_id(session)
         
         # settingsからbase_promptを自動生成
-        from utils.prompts import normalize_base_prompt, build_attribute_prompt, generate_profile_text
+        from utils.prompts import normalize_base_prompt, build_attribute_prompt, generate_profile_text, generate_display_profile
         
         # Get all attributes with type and display_name
         attributes = session.exec(select(MAttributes)).all()
@@ -140,10 +140,14 @@ def create_mate(
         # Generate attractive profile text from attributes (use_llm=False for stability)
         profile_text = generate_profile_text(settings_for_prompt, attributes_data, use_llm=False)
         
+        # Generate bullet-point display profile
+        display_profile = generate_display_profile(settings_for_prompt, attributes_data)
+        
         new_mate = AiMates(
             mate_name=request_data.mate_name,
             mate_id=mate_id,
             base_prompt=profile_text if profile_text else None,
+            display_profile=display_profile if display_profile else None,
             user_id=current_user.id,
             is_public=request_data.is_public
         )
@@ -595,7 +599,7 @@ def update_mate(
             mate.mate_id = request_data.mate_id
         
         # settingsからbase_promptを自動生成
-        from utils.prompts import normalize_base_prompt, build_attribute_prompt, generate_profile_text
+        from utils.prompts import normalize_base_prompt, build_attribute_prompt, generate_profile_text, generate_display_profile
         
         # Get all attributes with type and display_name
         attributes = session.exec(select(MAttributes)).all()
@@ -644,6 +648,10 @@ def update_mate(
         # Generate and update attractive profile text from attributes (use_llm=False for stability)
         profile_text = generate_profile_text(settings_for_prompt, attributes_data, use_llm=False)
         mate.base_prompt = profile_text if profile_text else None
+        
+        # Generate and update bullet-point display profile
+        display_profile = generate_display_profile(settings_for_prompt, attributes_data)
+        mate.display_profile = display_profile if display_profile else None
         
         # 3. 古い「魂の核心 (character_settings)」をぜんぶ DELETE
         old_settings = session.exec(

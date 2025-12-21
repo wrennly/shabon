@@ -76,6 +76,7 @@ class AiMateBase(SQLModel):
     mate_name: str
     mate_id: Optional[str] = Field(default=None, unique=True, index=True)  # Unique search ID
     base_prompt: Optional[str] = None  # User's raw prompt (processed before saving)
+    display_profile: Optional[str] = None  # Formatted profile for display (bullet points with line breaks)
     user_id: int = Field(foreign_key="users.id", index=True)
     is_public: bool = Field(default=False, index=True)
     is_deleted: bool = Field(default=False, index=True)  # Logical deletion flag
@@ -189,7 +190,8 @@ class MateInfoResponse(SQLModel):
     mate_name: str
     mate_id: Optional[str] = None  # Search ID
     last_message: Optional[str] = None
-    profile_preview: Optional[str] = None  # Brief profile
+    profile_preview: Optional[str] = None  # Brief profile (deprecated, use display_profile)
+    display_profile: Optional[str] = None  # Formatted profile for display (bullet points with line breaks)
     image_url: Optional[str] = None  # Mate image URL
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

@@ -39,6 +39,89 @@ def normalize_base_prompt(raw_prompt: Optional[str]) -> str:
     return normalized
 
 
+def generate_display_profile(settings: List[Dict[str, Any]], attributes_data: List[Dict[str, Any]]) -> str:
+    """
+    Generate bullet-point profile for display with line breaks.
+    
+    Args:
+        settings: List of mate settings (from mate_settings table)
+        attributes_data: List of attribute definitions (from m_attributes table)
+    
+    Returns:
+        Bullet-point profile text with line breaks
+    """
+    # Create attribute lookup map
+    attr_map = {attr['attribute_key']: attr for attr in attributes_data}
+    
+    # Extract key information
+    profile_data = {}
+    for setting in settings:
+        attr_key = setting.get('attribute_key')
+        if attr_key and attr_key in attr_map:
+            attr = attr_map[attr_key]
+            attr_type = attr.get('attribute_type', '')
+            
+            if attr_type == 'select':
+                value = setting.get('option_value', '')
+            else:
+                value = setting.get('custom_value', '')
+            
+            if value:
+                profile_data[attr_key] = value
+    
+    # Build bullet-point profile
+    lines = []
+    
+    # Gender + Age
+    gender = profile_data.get('gender', '')
+    age = profile_data.get('age_range', '')
+    if gender or age:
+        parts = []
+        if age:
+            parts.append(age)
+        if gender:
+            parts.append(gender)
+        if parts:
+            lines.append(f"👤 {'・'.join(parts)}")
+    
+    # Occupation
+    occupation = profile_data.get('occupation', '')
+    if occupation:
+        lines.append(f"💼 {occupation}")
+    
+    # Hobbies
+    hobbies = profile_data.get('hobbies', '')
+    if hobbies:
+        lines.append(f"🎨 趣味: {hobbies}")
+    
+    # Specialty
+    specialty = profile_data.get('specialty', '')
+    if specialty:
+        lines.append(f"⭐ 得意: {specialty}")
+    
+    # Relationship
+    relationship = profile_data.get('relationship', '')
+    if relationship:
+        lines.append(f"🤝 あなたの{relationship}")
+    
+    # Tone style
+    tone = profile_data.get('tone_style', '')
+    if tone:
+        lines.append(f"💬 {tone}で話す")
+    
+    # Catchphrase
+    catchphrase = profile_data.get('catchphrase', '')
+    if catchphrase:
+        lines.append(f"🗣️ 口癖: {catchphrase}")
+    
+    # Dialogue stance
+    stance = profile_data.get('dialogue_stance', '')
+    if stance:
+        lines.append(f"💭 {stance}")
+    
+    return '\n'.join(lines)
+
+
 def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[Dict[str, Any]], use_llm: bool = True) -> str:
     """
     Generate attractive profile text from mate settings.

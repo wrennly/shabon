@@ -17,6 +17,7 @@ interface MateDetailModalProps {
     image_url?: string | null;
     profile_preview?: string | null;
     base_prompt?: string | null;
+    display_profile?: string | null;
   } | null;
   showChatButton?: boolean;
 }
@@ -92,7 +93,7 @@ export const MateDetailModal: React.FC<MateDetailModalProps> = ({
                     プロフィール
                   </Text>
                   <Text style={[styles.profileText, { color: theme.glassText }]}>
-                    {mate.base_prompt || mate.profile_preview || 'プロフィールが設定されていません。'}
+                    {mate.display_profile || mate.base_prompt || mate.profile_preview || 'プロフィールが設定されていません。'}
                   </Text>
                 </ScrollView>
 
@@ -146,7 +147,7 @@ export const MateDetailModal: React.FC<MateDetailModalProps> = ({
                   プロフィール
                 </Text>
                 <Text style={[styles.profileText, { color: theme.text }]}>
-                  {mate.base_prompt || mate.profile_preview || 'プロフィールが設定されていません。'}
+                  {mate.display_profile || mate.base_prompt || mate.profile_preview || 'プロフィールが設定されていません。'}
                 </Text>
               </ScrollView>
 
