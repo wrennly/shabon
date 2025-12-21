@@ -43,6 +43,13 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
   const [shouldMount, setShouldMount] = useState(hasPlayedGlobal);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
+  // 画面がフォーカスされた時に、既に再生済みならマウントする
+  useEffect(() => {
+    if (hasPlayedGlobal && !shouldMount) {
+      setShouldMount(true);
+    }
+  }, []);
+
   // アニメーション再生イベントを受け取る（ログイン後のみ）
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener(PLAY_ANIMATION_EVENT, () => {
