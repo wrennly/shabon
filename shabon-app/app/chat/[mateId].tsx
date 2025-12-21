@@ -26,13 +26,14 @@ interface ChatHistoryEntry {
 export default function ChatScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { mateId } = useLocalSearchParams<{ mateId: string }>();
+  const params = useLocalSearchParams<{ mateId: string; mateName?: string; mateImageUrl?: string }>();
+  const { mateId, mateName: initialMateName, mateImageUrl: initialMateImageUrl } = params;
   const navigation = useNavigation();
   const [newMessage, setNewMessage] = useState('');
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
-  const [mateName, setMateName] = useState('...');
-  const [mateImageUrl, setMateImageUrl] = useState<string | null>(null);
+  const [mateName, setMateName] = useState(initialMateName || '...');
+  const [mateImageUrl, setMateImageUrl] = useState<string | null>(initialMateImageUrl || null);
   const [loading, setLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   const lastSentMessageRef = useRef<string>('');
@@ -41,7 +42,7 @@ export default function ChatScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMateDetailModal, setShowMateDetailModal] = useState(false);
-  const [mateBasePrompt, setMateBasePrompt] = useState<string | null>(null);
+  const [mateDisplayProfile, setMateDisplayProfile] = useState<string | null>(null);
   const [mateMateId, setMateMateId] = useState<string | null>(null);
   
   // 入力欄のアニメーション
@@ -241,7 +242,7 @@ export default function ChatScreen() {
       // Set mate details
       setMateName(mateResponse.data.mate_name || 'Unknown');
       setMateImageUrl(mateResponse.data.image_url || null);
-      setMateBasePrompt(mateResponse.data.base_prompt || null);
+      setMateDisplayProfile(mateResponse.data.display_profile || mateResponse.data.base_prompt || null);
       setMateMateId(mateResponse.data.mate_id || null);
 
       // Set chat history
@@ -523,7 +524,7 @@ export default function ChatScreen() {
           mate_name: mateName,
           mate_id: mateMateId || undefined,
           image_url: mateImageUrl,
-          base_prompt: mateBasePrompt
+          display_profile: mateDisplayProfile
         } : null}
         showChatButton={false}
       />

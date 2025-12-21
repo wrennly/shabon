@@ -131,7 +131,13 @@ export default function MatesScreen() {
   };
 
   const handleMateSelect = (mate: Mate) => {
-    router.push(`/chat/${mate.id}`);
+    router.push({
+      pathname: `/chat/${mate.id}`,
+      params: {
+        mateName: mate.mate_name,
+        mateImageUrl: mate.image_url || '',
+      }
+    });
   };
 
   const handleDeleteMate = async (mateId: number) => {
