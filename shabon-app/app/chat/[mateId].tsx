@@ -10,7 +10,7 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { BlurView } from 'expo-blur';
 import { BackButton } from '@/components/BackButton';
 import { MateDetailModal } from '@/components/MateDetailModal';
-import { TopRightMenu } from '@/components/TopRightMenu';
+import { SettingsMenu } from '@/components/SettingsMenu';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -477,20 +477,18 @@ export default function ChatScreen() {
       </Animated.View>
 
       {/* 設定メニュー */}
-      <TopRightMenu
+      <SettingsMenu
         visible={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-        buttonTop={Platform.OS === 'ios' ? 65 : 24}
+        buttonTop={Platform.OS === 'ios' ? 60 : 20}
         buttonRight={16}
         actions={[
           {
             title: 'プロフィールを見る',
-            icon: <Ionicons name="information-circle-outline" size={24} color={theme.tint} />,
             onPress: handleShowProfile,
           },
           {
             title: '不適切なコンテンツを報告',
-            icon: <Ionicons name="flag-outline" size={24} color="#FF3B30" />,
             onPress: handleShowReport,
             isDestructive: true,
           },
