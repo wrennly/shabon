@@ -13,6 +13,9 @@ from utils.cache import (
     clear_attributes_cache, clear_query_cache,
     REDIS_ENABLED, redis_client, CACHE_TTL_SECONDS, _attribute_cache
 )
+from utils.resource_monitor import (
+    get_system_resources, get_database_stats, send_resource_report_to_discord
+)
 
 # Router setup
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -158,4 +161,37 @@ def get_memory_stats(
         "user_messages": user_messages,
         "model_messages": model_messages,
         "timestamp": datetime.now().isoformat()
+    }
+
+@router.get("/resources/report")
+def get_resource_report(
+    admin_key: str = Query(...),
+    send_to_discord: bool = Query(False),
+    session: Session = Depends(get_session)
+):
+    """
+    Get system and database resource usage report
+    Optionally send to Discord webhook
+    """
+    ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
+    if admin_key != ADMIN_SECRET or not ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Collect resource data
+    system_resources = get_system_resources()
+    db_stats = get_database_stats(session)
+    
+    # Send to Discord if requested
+    if send_to_discord:
+        send_resource_report_to_discord(
+            system_resources=system_resources,
+            db_stats=db_stats,
+            custom_message="📊 Manual resource report requested"
+        )
+    
+    return {
+        "system_resources": system_resources,
+        "database_stats": db_stats,
+        "timestamp": datetime.now().isoformat(),
+        "sent_to_discord": send_to_discord
     }

@@ -19,3 +19,4 @@ pgvector
 numpy
 supabase
 python-multipart
+psutil
