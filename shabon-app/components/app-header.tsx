@@ -43,9 +43,13 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
   const [shouldMount, setShouldMount] = useState(hasPlayedGlobal);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
+  console.log('[AppHeader] Render:', { hasPlayedGlobal, shouldMount, showLogo, title });
+
   // 画面がフォーカスされた時に、既に再生済みならマウントする
   useEffect(() => {
+    console.log('[AppHeader] useEffect:', { hasPlayedGlobal, shouldMount, showLogo });
     if (hasPlayedGlobal && !shouldMount && showLogo) {
+      console.log('[AppHeader] Setting shouldMount to true');
       setShouldMount(true);
     }
   }, [showLogo, shouldMount]);
