@@ -41,21 +41,25 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
   const lottieRef = useRef<LottieView>(null);
   const lastAppStateRef = useRef(AppState.currentState);
   
-  // 再生済みなら最終フレームで表示、未再生ならマウントしない
+  // 再生済みなら最終フレームで表示、未再生なら初回マウント時に再生
   const [shouldMount, setShouldMount] = useState(hasPlayedGlobal);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const hasInitializedRef = useRef(false);
 
   console.log('[AppHeader] Render:', { hasPlayedGlobal, shouldMount, showLogo, title });
 
-  // 画面がフォーカスされた時に、既に再生済みならマウントする、未再生なら再生する
+  // 初回マウント時の処理
   useEffect(() => {
-    console.log('[AppHeader] useEffect:', { hasPlayedGlobal, shouldMount, showLogo });
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    console.log('[AppHeader] Initial mount:', { hasPlayedGlobal, showLogo });
     if (showLogo) {
-      if (hasPlayedGlobal && !shouldMount) {
+      if (hasPlayedGlobal) {
         // 既に再生済み → 最終フレームで表示
-        console.log('[AppHeader] Setting shouldMount to true (already played)');
+        console.log('[AppHeader] Showing final frame (already played)');
         setShouldMount(true);
-      } else if (!hasPlayedGlobal && !shouldMount) {
+      } else {
         // 未再生 → 自動再生
         console.log('[AppHeader] Auto-playing animation (first time)');
         hasPlayedGlobal = true;
@@ -63,20 +67,22 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
         setShouldMount(true);
       }
     }
-  }, [showLogo, shouldMount]);
+  }, [showLogo]);
 
   // アニメーション再生イベントを受け取る（ログイン後のみ）
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener(PLAY_ANIMATION_EVENT, () => {
       console.log('[AppHeader] PLAY_ANIMATION_EVENT received', { showLogo });
       if (showLogo) {
-        console.log('[AppHeader] Playing animation');
+        console.log('[AppHeader] Playing animation from event');
         hasPlayedGlobal = true;
+        hasInitializedRef.current = false; // リセットして再初期化
         // 一度アンマウントして再マウント（autoPlay で最初から再生）
         setShouldMount(false);
         setShouldAutoPlay(true);
         setTimeout(() => {
           setShouldMount(true);
+          hasInitializedRef.current = true;
         }, 50);
       }
     });
