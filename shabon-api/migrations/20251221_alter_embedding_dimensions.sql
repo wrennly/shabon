@@ -11,3 +11,4 @@ ALTER COLUMN embedding TYPE vector(1024);
 -- Add comment
 COMMENT ON COLUMN conversation_memory.embedding IS 'Jina AI v3 embeddings (1024 dimensions)';
 
+
