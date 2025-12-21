@@ -58,8 +58,8 @@ class MateSettingBase(SQLModel):
     custom_value: Optional[str] = None
     
     # Parent reference
-    mate_id: int = Field(foreign_key="ai_mates.id")
-    attribute_id: int = Field(foreign_key="m_attributes.id")
+    mate_id: int = Field(foreign_key="ai_mates.id", index=True)
+    attribute_id: int = Field(foreign_key="m_attributes.id", index=True)
     option_id: Optional[int] = Field(default=None, foreign_key="m_attribute_options.id")
 
 class MateSettings(MateSettingBase, table=True):
@@ -76,7 +76,7 @@ class AiMateBase(SQLModel):
     mate_name: str
     mate_id: Optional[str] = Field(default=None, unique=True, index=True)  # Unique search ID
     base_prompt: Optional[str] = None  # User's raw prompt (processed before saving)
-    user_id: int = Field(foreign_key="users.id")
+    user_id: int = Field(foreign_key="users.id", index=True)
     is_public: bool = Field(default=False, index=True)
     is_deleted: bool = Field(default=False, index=True)  # Logical deletion flag
     image_url: Optional[str] = None  # Supabase Storage URL for mate image

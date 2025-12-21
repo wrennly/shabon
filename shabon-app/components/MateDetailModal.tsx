@@ -65,7 +65,7 @@ export function MateDetailModal({
                 resizeMode="cover"
               />
             ) : (
-              <View style={[styles.mateImagePlaceholder, { backgroundColor: theme.cardBackground }]}>
+              <View style={[styles.mateImagePlaceholder, { backgroundColor: theme.card }]}>
                 <Ionicons name="person" size={60} color={theme.icon} />
               </View>
             )}

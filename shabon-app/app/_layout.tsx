@@ -13,6 +13,9 @@ import { useAssets } from 'expo-asset';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import AnimatedSplash from '@/components/AnimatedSplash';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, asyncStoragePersister } from '@/lib/queryClient';
 
 // Initialize Sentry (only on native platforms - iOS/Android)
 // Web monitoring is handled separately to avoid SSR/dependency conflicts
@@ -60,28 +63,33 @@ export default function RootLayout() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ShabonBackground />
-      <ThemeProvider value={transparentTheme}>
-        <Stack screenOptions={{ contentStyle: { backgroundColor: 'transparent' } }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="profile" options={{ headerShown: false }} />
-          <Stack.Screen name="chat/[mateId]" options={{ headerShown: false }} />
-          <Stack.Screen name="mate-editor/[mateId]" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-      {showSplash && (
-        <AnimatedSplash
-          isLoading={!appReady}
-          onAnimationFinish={handleSplashFinish}
-        />
-      )}
-    </GestureHandlerRootView>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister: asyncStoragePersister }}
+    >
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ShabonBackground />
+        <ThemeProvider value={transparentTheme}>
+          <Stack screenOptions={{ contentStyle: { backgroundColor: 'transparent' } }}>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen name="profile" options={{ headerShown: false }} />
+            <Stack.Screen name="chat/[mateId]" options={{ headerShown: false }} />
+            <Stack.Screen name="mate-editor/[mateId]" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+        {showSplash && (
+          <AnimatedSplash
+            isLoading={!appReady}
+            onAnimationFinish={handleSplashFinish}
+          />
+        )}
+      </GestureHandlerRootView>
+    </PersistQueryClientProvider>
   );
 }
 
