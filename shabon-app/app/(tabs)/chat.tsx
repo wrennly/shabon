@@ -43,8 +43,8 @@ export default function MatesScreen() {
 
   useEffect(() => {
     if (isFocused) {
-      // チャットから戻った時は強制リフレッシュ
-      checkAuthAndLoad(true);
+      // チャットから戻った時もキャッシュを使う
+      checkAuthAndLoad(false);
     }
   }, [isFocused]);
 
