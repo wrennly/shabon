@@ -50,13 +50,13 @@ def set_gemini_model(gemini_model):
 
 
 def get_embedding(text: str) -> Optional[List[float]]:
-    """Jina AI Embedding API を使ってテキストをベクトル化（8192次元）"""
+    """Jina AI Embedding API を使ってテキストをベクトル化（1024次元）"""
     try:
-        print(f"🔧 Using Jina AI embedding model (8192 dimensions)")
+        print(f"🔧 Using Jina AI embedding model (1024 dimensions)")
         response = jina_client.embeddings.create(
             model="jina-embeddings-v3",
-            input=text,
-            dimensions=8192  # Maximum dimension for best performance
+            input=[text],  # input should be a list
+            dimensions=1024  # Maximum dimension for jina-embeddings-v3
         )
         embedding = response.data[0].embedding
         print(f"🔧 Embedding dimension: {len(embedding)}")
