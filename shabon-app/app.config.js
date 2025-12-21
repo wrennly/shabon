@@ -21,6 +21,7 @@ module.exports = ({ config }) => {
       ...(config.plugins || []),
       "expo-secure-store",
       "expo-web-browser",
+      "expo-sqlite",
       // expo-image-picker: ネイティブビルド時のみ必要（Webでは不要）
       ...(!isWeb ? [
         [

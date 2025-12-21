@@ -10,6 +10,7 @@ import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 import { logToDiscord, logErrorToDiscord } from '@/utils/discord-logger';
+import { getMates, saveMates } from '@/lib/database';
 
 import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 
@@ -68,25 +69,28 @@ export default function MatesScreen() {
     try {
       await logToDiscord('📋 loadMates開始', { forceRefresh });
       
-      // キャッシュチェック
+      // 1. SQLiteキャッシュから即座に表示
+      const cachedMates = await getMates();
+      if (cachedMates.length > 0) {
+        await logToDiscord('💾 SQLiteキャッシュから表示', { matesCount: cachedMates.length });
+        setMates(cachedMates as Mate[]);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+      
+      // 2. メモリキャッシュチェック
       const now = Date.now();
       const cacheValid = cacheRef.current.data && 
                         (now - cacheRef.current.timestamp) < CACHE_DURATION;
       
       if (cacheValid && !forceRefresh) {
-        // キャッシュから即座に表示（ローディングなし）
-        await logToDiscord('💾 キャッシュから表示', { matesCount: cacheRef.current.data!.length });
-        setMates(cacheRef.current.data!);
-        setLoading(false);
+        await logToDiscord('💾 メモリキャッシュ有効 - API呼び出しスキップ');
         setRefreshing(false);
         return;
       }
       
-      // キャッシュがない、または古い場合のみローディング表示
-      if (!cacheRef.current.data) {
-        setLoading(true);
-      }
-      
+      // 3. APIから最新データを取得
       await logToDiscord('📡 /mates/ APIコール開始');
       const response = await apiClient.get('/mates/?filter=chatted_only');
       
@@ -101,7 +105,10 @@ export default function MatesScreen() {
       
       setMates(sortedMates);
       
-      // キャッシュを更新
+      // 4. SQLiteに保存
+      await saveMates(sortedMates);
+      
+      // 5. メモリキャッシュを更新
       cacheRef.current = {
         data: sortedMates,
         timestamp: now

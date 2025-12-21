@@ -15,6 +15,7 @@ import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 import { useIsFocused } from '@react-navigation/native';
 import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
 import { MateDetailModal } from '@/components/MateDetailModal';
+import { getPublicMates, savePublicMates } from '@/lib/database';
 
 interface Mate {
   id: number;
@@ -120,6 +121,15 @@ export default function ExploreScreen() {
     try {
       await logToDiscord('🌍 公開メイト取得開始');
       
+      // 1. SQLiteキャッシュから即座に表示
+      const cachedMates = await getPublicMates();
+      if (cachedMates.length > 0) {
+        await logToDiscord('💾 SQLiteキャッシュから表示', { matesCount: cachedMates.length });
+        setPublicMates(cachedMates);
+        setLoading(false);
+      }
+      
+      // 2. APIから最新データを取得
       const response = await apiClient.get('/mates/public');
       
       await logSuccessToDiscord('✅ 公開メイト取得成功', {
@@ -128,6 +138,9 @@ export default function ExploreScreen() {
       });
       
       setPublicMates(response.data);
+      
+      // 3. SQLiteに保存
+      await savePublicMates(response.data);
     } catch (error: any) {
       await logErrorToDiscord('🔴 ERROR: 公開メイト取得失敗', error);
       console.error('Failed to load public mates:', error);
