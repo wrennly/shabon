@@ -362,22 +362,20 @@ export default function ChatScreen() {
           <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
         </View>
         {/* 設定ボタン */}
-        <TouchableOpacity onPress={handleSettingsButtonPress} style={styles.reportButtonContainer}>
+        <TouchableOpacity onPress={handleSettingsButtonPress} style={styles.settingsButtonContainer}>
           {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
-            <GlassView style={styles.reportButtonGlass} isInteractive>
-              <View style={styles.reportButtonInner}>
-                <Ionicons name="ellipsis-horizontal" size={20} color={theme.glassText} />
-              </View>
+            <GlassView style={styles.settingsButtonGlass} isInteractive>
+              <Ionicons name="ellipsis-horizontal" size={24} color={theme.glassText} />
             </GlassView>
           ) : (
             <View style={[
-              styles.reportButtonFallback,
+              styles.settingsButtonFallback,
               {
-                backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.8)',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
               }
             ]}>
-              <Ionicons name="ellipsis-horizontal" size={20} color={theme.icon} />
+              <Ionicons name="ellipsis-horizontal" size={24} color={theme.text} />
             </View>
           )}
         </TouchableOpacity>
@@ -482,7 +480,7 @@ export default function ChatScreen() {
       <TopRightMenu
         visible={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-        buttonTop={Platform.OS === 'ios' ? 60 : 20}
+        buttonTop={Platform.OS === 'ios' ? 65 : 24}
         buttonRight={16}
         actions={[
           {
@@ -645,29 +643,28 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
-  reportButtonContainer: {
-    width: 44,
-    height: 44,
-  },
-  reportButtonGlass: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  settingsButtonContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     overflow: 'hidden',
   },
-  reportButtonFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
+  settingsButtonGlass: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  settingsButtonFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
-  },
-  reportButtonInner: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+    padding: 0,
   },
   messageListContainer: {
     flex: 1,
