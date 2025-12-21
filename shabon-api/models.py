@@ -194,6 +194,7 @@ class MateInfoResponse(SQLModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     last_chat_time: Optional[datetime] = None  # Latest chat timestamp
+    is_public: Optional[bool] = None  # Public/Private status
 
 class MateEditDetailResponse(SQLModel):
     mate_name: str

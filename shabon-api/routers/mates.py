@@ -326,7 +326,8 @@ def get_my_mates(
             updated_at=mate.updated_at,
             last_message=latest_chats.get(mate.id),
             last_chat_time=latest_chat_times.get(mate.id),
-            image_url=mate.image_url
+            image_url=mate.image_url,
+            is_public=mate.is_public  # 公開/非公開ステータスを追加
         )
         for mate in mates
     ]

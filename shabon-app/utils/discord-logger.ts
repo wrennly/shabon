@@ -41,13 +41,14 @@ export const logToDiscord = async (message: string, data?: any) => {
     });
     
     if (!response.ok) {
-      console.error('Discord webhook failed:', response.status, response.statusText);
-    } else {
-      console.log('[Discord] Message sent successfully');
+      // 429 (Rate Limit) は無視（ログが多すぎるだけなので問題なし）
+      if (response.status !== 429) {
+        console.warn('[Discord] Webhook failed:', response.status, response.statusText);
+      }
     }
   } catch (error) {
-    // Discord送信失敗は無視（通常のログには出力）
-    console.error('Failed to send log to Discord:', error);
+    // Discord送信失敗は無視（アプリの動作には影響しない）
+    // console.error を使わないことで、ユーザーに表示されない
   }
 };
 
@@ -65,7 +66,7 @@ export const logErrorToDiscord = async (message: string, error: any) => {
     
     await logToDiscord(`🔴 **ERROR:** ${message}`, errorInfo);
   } catch (e) {
-    console.error('Failed to send error to Discord:', e);
+    // Discord送信失敗は無視
   }
 };
 
@@ -76,7 +77,7 @@ export const logSuccessToDiscord = async (message: string, data?: any) => {
   try {
     await logToDiscord(`✅ **SUCCESS:** ${message}`, data);
   } catch (e) {
-    console.error('Failed to send success to Discord:', e);
+    // Discord送信失敗は無視
   }
 };
 

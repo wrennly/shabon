@@ -172,7 +172,16 @@ export default function MatesScreen() {
               )}
             </View>
             <View style={styles.listItemTextContainer}>
-              <Text style={[styles.listItemTitle, { color: theme.text }]}>{item.mate_name}</Text>
+              <View style={styles.listItemTitleRow}>
+                <Text style={[styles.listItemTitle, { color: theme.text }]}>{item.mate_name}</Text>
+                {item.is_public !== undefined && (
+                  <View style={[styles.publicBadge, { backgroundColor: item.is_public ? 'rgba(52, 199, 89, 0.15)' : 'rgba(142, 142, 147, 0.15)' }]}>
+                    <Text style={[styles.publicBadgeText, { color: item.is_public ? '#34C759' : '#8E8E93' }]}>
+                      {item.is_public ? '公開' : '非公開'}
+                    </Text>
+                  </View>
+                )}
+              </View>
               {item.last_message && (
                 <Text style={styles.listItemSubtitle} numberOfLines={1}>
                   {item.last_message}
@@ -278,8 +287,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  listItemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   listItemTitle: {
     fontSize: 17,
+    fontWeight: '600',
+  },
+  publicBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  publicBadgeText: {
+    fontSize: 11,
     fontWeight: '600',
   },
   listItemSubtitle: {

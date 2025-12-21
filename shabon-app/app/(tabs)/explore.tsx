@@ -155,13 +155,6 @@ export default function ExploreScreen() {
     setShowDetailModal(true);
   };
 
-  const handleStartChat = () => {
-    if (selectedMate) {
-      setShowDetailModal(false);
-      router.push(`/chat/${selectedMate.id}`);
-    }
-  };
-
   const filteredMates = publicMates.filter((mate) =>
     mate.mate_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -325,10 +318,10 @@ export default function ExploreScreen() {
 
       {/* メイト詳細モーダル */}
       <MateDetailModal
-        visible={showDetailModal}
+        isVisible={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         mate={selectedMate}
-        onStartChat={handleStartChat}
+        showChatButton={true}
       />
     </View>
   );
