@@ -126,11 +126,15 @@ export default function MateBuilderScreen() {
   };
 
   const loadSchema = async () => {
+    console.log('🔍 [Craft] loadSchema START');
     try {
+      console.log('🔍 [Craft] Calling logToDiscord...');
       await logToDiscord('📋 [Craft] スキーマ読み込み開始');
+      console.log('🔍 [Craft] logToDiscord done');
       
       // キャッシュがあればそれを使う（ローディングなし）
       if (cachedSchema) {
+        console.log('🔍 [Craft] Using cache:', cachedSchema?.length);
         await logToDiscord('💾 [Craft] キャッシュから読み込み', { attributesCount: cachedSchema.length });
         setSchema(cachedSchema);
         setLoading(false);
@@ -138,6 +142,7 @@ export default function MateBuilderScreen() {
       }
       
       // キャッシュがない場合のみローディング表示
+      console.log('🔍 [Craft] No cache, fetching from API...');
       setLoading(true);
       await logToDiscord('📡 [Craft] /settings/schema API呼び出し');
       const response = await apiClient.get('/settings/schema');
@@ -151,6 +156,7 @@ export default function MateBuilderScreen() {
       cachedSchema = sortedAttributes;
       setSchema(sortedAttributes);
     } catch (error: any) {
+      console.log('🔍 [Craft] ERROR:', error);
       await logErrorToDiscord('🔴 [Craft] スキーマ読み込みエラー', error);
       console.error('Failed to load schema:', error);
       if (error.response?.status === 401) {
@@ -159,6 +165,7 @@ export default function MateBuilderScreen() {
       }
       setSubmitMessage('スキーマの読み込みに失敗しました');
     } finally {
+      console.log('🔍 [Craft] loadSchema FINALLY');
       setLoading(false);
     }
   };

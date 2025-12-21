@@ -269,11 +269,14 @@ export default function ChatScreen() {
   };
 
   const handleSend = async () => {
+    console.log('🔍 [Chat] handleSend START', { hasMessage: !!newMessage.trim(), isThinking });
     if (!newMessage.trim() || isThinking) return;
 
     const currentText = newMessage;
     const userMessage: ChatMessage = { role: 'user', text: currentText };
     const previousHistory: ChatMessage[] = history;
+    
+    console.log('🔍 [Chat] Sending message:', { text: currentText.substring(0, 50), historyLength: previousHistory.length });
     
     // 1. ユーザーメッセージを即座に表示（Optimistic UI）
     lastSentMessageRef.current = currentText;
@@ -285,11 +288,13 @@ export default function ChatScreen() {
 
     // 2. バックグラウンドでAIに送信
     try {
+      console.log('🔍 [Chat] Calling API...');
       const response = await apiClient.post('/chat/', {
         mate_id: Number(mateId),
         new_message: currentText,
         history: previousHistory,
       });
+      console.log('🔍 [Chat] API response received:', { replyLength: response.data.reply_text?.length });
 
       // 3. AIの返信を追加
       const modelMessage: ChatMessage = {
@@ -309,6 +314,7 @@ export default function ChatScreen() {
       }));
       await saveChatHistory(parseInt(mateId as string), historyForSave);
     } catch (error) {
+      console.log('🔍 [Chat] ERROR:', error);
       console.error('Failed to send message:', error);
       const errorMessage: ChatMessage = {
         role: 'model',
