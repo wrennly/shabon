@@ -330,7 +330,8 @@ def get_my_mates(
             last_message=latest_chats.get(mate.id),
             last_chat_time=latest_chat_times.get(mate.id),
             image_url=mate.image_url,
-            is_public=mate.is_public  # 公開/非公開ステータスを追加
+            is_public=mate.is_public,  # 公開/非公開ステータスを追加
+            display_profile=mate.display_profile  # 箇条書きプロフィール
         )
         for mate in mates
     ]
@@ -454,7 +455,8 @@ def get_public_mates(
                 created_at=mate.created_at,
                 updated_at=mate.updated_at,
                 profile_preview=profile_preview,
-                image_url=mate.image_url
+                image_url=mate.image_url,
+                display_profile=mate.display_profile  # 箇条書きプロフィール
             )
         )
     
@@ -558,6 +560,8 @@ def get_public_character_details(
         "mate_name": mate.mate_name,
         "is_public": mate.is_public,
         "image_url": mate.image_url,
+        "display_profile": mate.display_profile,
+        "base_prompt": mate.base_prompt,
         "id": mate.id
     }
 
