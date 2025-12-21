@@ -18,9 +18,11 @@ export function prepareHeaderAnimation() {
 
 // ログイン後にアニメーションを再生するための関数
 export function resetHeaderAnimation() {
+  console.log('[resetHeaderAnimation] Called - resetting hasPlayedGlobal');
   hasPlayedGlobal = false; // リセットして次回再生可能に
   // 少し遅延させてから発火（画面遷移完了を待つ）
   setTimeout(() => {
+    console.log('[resetHeaderAnimation] Emitting PLAY_ANIMATION_EVENT');
     DeviceEventEmitter.emit(PLAY_ANIMATION_EVENT);
   }, 500);
 }
@@ -57,7 +59,9 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
   // アニメーション再生イベントを受け取る（ログイン後のみ）
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener(PLAY_ANIMATION_EVENT, () => {
+      console.log('[AppHeader] PLAY_ANIMATION_EVENT received', { showLogo });
       if (showLogo) {
+        console.log('[AppHeader] Playing animation');
         hasPlayedGlobal = true;
         // 一度アンマウントして再マウント（autoPlay で最初から再生）
         setShouldMount(false);
