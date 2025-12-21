@@ -129,7 +129,7 @@ class ConversationMemoryBase(SQLModel):
 class ConversationMemory(ConversationMemoryBase, table=True):
     __tablename__: str = "conversation_memory"
     id: Optional[int] = Field(default=None, primary_key=True)
-    embedding: Optional[List[float]] = Field(default=None, sa_column=Column(Vector(768)))
+    embedding: Optional[List[float]] = Field(default=None, sa_column=Column(Vector(8192)))  # Jina AI v3: 8192 dimensions
     embedded_at: Optional[datetime] = Field(default_factory=datetime.utcnow, index=True)
     mate: "AiMates" = Relationship()
     user: Users = Relationship()

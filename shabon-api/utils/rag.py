@@ -1,8 +1,8 @@
 # utils/rag.py
 """
 RAG (Retrieval Augmented Generation) 関連ユーティリティ
-- Embedding生成（Gemini API）
-- 会話要約生成
+- Embedding生成（DeepSeek API）
+- 会話要約生成（DeepSeek R1）
 - 記憶保存
 - コサイン類似度計算
 - 関連記憶検索
@@ -10,7 +10,8 @@ RAG (Retrieval Augmented Generation) 関連ユーティリティ
 """
 
 from typing import List, Optional
-import google.generativeai as genai
+import os
+from openai import OpenAI
 from sqlmodel import Session, select, desc
 from sqlalchemy import text
 import numpy as np
@@ -26,27 +27,38 @@ from settings import (
     SUMMARY_CATEGORIES
 )
 
-# Gemini モデルは main.py で初期化される想定
-# グローバル変数として参照
+# DeepSeek client for summaries
+deepseek_client = OpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com"
+)
+
+# Jina AI client for embeddings (8192 dimensions!)
+jina_client = OpenAI(
+    api_key=os.getenv("JINA_API_KEY"),
+    base_url="https://api.jina.ai/v1"
+)
+
+# Legacy: Gemini model reference (for backward compatibility)
 model = None
 
 def set_gemini_model(gemini_model):
-    """Gemini モデルをセット（main.pyから呼び出される）"""
+    """Legacy function for backward compatibility"""
     global model
     model = gemini_model
+    print("⚠️  set_gemini_model called but using Jina AI for embeddings and DeepSeek R1 for summaries")
 
 
 def get_embedding(text: str) -> Optional[List[float]]:
-    """Gemini Embedding API を使ってテキストをベクトル化"""
+    """Jina AI Embedding API を使ってテキストをベクトル化（8192次元）"""
     try:
-        model_name = "models/embedding-001"
-        print(f"🔧 Using embedding model: {model_name}")
-        result = genai.embed_content(
-            model=model_name,
-            content=text,
-            task_type="retrieval_document"
+        print(f"🔧 Using Jina AI embedding model (8192 dimensions)")
+        response = jina_client.embeddings.create(
+            model="jina-embeddings-v3",
+            input=text,
+            dimensions=8192  # Maximum dimension for best performance
         )
-        embedding = result['embedding']
+        embedding = response.data[0].embedding
         print(f"🔧 Embedding dimension: {len(embedding)}")
         return embedding
     except Exception as e:
@@ -58,7 +70,7 @@ def get_embedding(text: str) -> Optional[List[float]]:
 
 def generate_conversation_summary(messages: List[ChatMessage]) -> Optional[str]:
     """
-    過去の会話をAIに要約させる
+    過去の会話をDeepSeek R1に要約させる
     重要な情報を抽出して「長期記憶」として保存
     """
     if not messages or len(messages) < 2:
@@ -74,30 +86,33 @@ def generate_conversation_summary(messages: List[ChatMessage]) -> Optional[str]:
     categories_text = "\n".join([f"- {cat}" for cat in SUMMARY_CATEGORIES])
     
     try:
-        # Gemini にこの会話から重要な情報を抽出してもらう
-        convo = model.start_chat(history=[
-            {
-                "role": "user",
-                "parts": [f"""
-以下の会話から、AIメイトが「覚えておくべき重要な情報」を{SUMMARY_LENGTH}で詳しく抽出してください。
+        # DeepSeek R1 にこの会話から重要な情報を抽出してもらう
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-reasoner",  # R1 for better reasoning
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""以下の会話から、AIメイトが「覚えておくべき重要な情報」を{SUMMARY_LENGTH}で詳しく抽出してください。
 以下の情報を優先的に記録してください：
 {categories_text}
 
 会話:
 {conversation_text}
 
-記憶に保存すべき情報（具体的かつ詳細に。ない場合のみ「特になし」と回答）:
-"""]
-            }
-        ])
-        response = convo.send_message("")
-        summary = response.text.strip()
+記憶に保存すべき情報（具体的かつ詳細に。ない場合のみ「特になし」と回答）:"""
+                }
+            ],
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        summary = response.choices[0].message.content.strip()
         
         # 「特になし」の場合は None を返す
         if "特になし" in summary or summary == "特になし":
             return None
         
-        print(f"📝 Generated summary: {summary}")
+        print(f"📝 Generated summary with DeepSeek R1: {summary[:100]}...")
         return summary
     except Exception as e:
         print(f"⚠️  Summary generation error: {e}")

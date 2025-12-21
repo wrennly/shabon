@@ -39,14 +39,15 @@ def normalize_base_prompt(raw_prompt: Optional[str]) -> str:
     return normalized
 
 
-def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[Dict[str, Any]]) -> str:
+def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[Dict[str, Any]], use_llm: bool = True) -> str:
     """
     Generate attractive profile text from mate settings.
-    Converts structured settings into a natural, flowing narrative.
+    Converts structured settings into a natural, flowing narrative using DeepSeek.
     
     Args:
         settings: List of mate settings (from mate_settings table)
         attributes_data: List of attribute definitions (from m_attributes table)
+        use_llm: Whether to use LLM for generation (default: True)
     
     Returns:
         Natural profile text suitable for display
@@ -61,6 +62,7 @@ def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[
         if attr_key and attr_key in attr_map:
             attr = attr_map[attr_key]
             attr_type = attr.get('attribute_type', '')
+            display_name = attr.get('display_name', '')
             
             if attr_type == 'select':
                 value = setting.get('option_value', '')
@@ -68,15 +70,65 @@ def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[
                 value = setting.get('custom_value', '')
             
             if value:
-                profile_data[attr_key] = value
+                profile_data[attr_key] = {'value': value, 'display_name': display_name}
     
-    # Build natural profile text
+    if not profile_data:
+        return ""
+    
+    # Use LLM to generate natural profile text
+    if use_llm:
+        try:
+            from openai import OpenAI
+            import os
+            
+            client = OpenAI(
+                api_key=os.getenv("DEEPSEEK_API_KEY"),
+                base_url="https://api.deepseek.com"
+            )
+            
+            # Build structured data for LLM
+            settings_text = ""
+            for key, data in profile_data.items():
+                settings_text += f"- {data['display_name']}: {data['value']}\n"
+            
+            prompt = f"""以下のキャラクター設定から、魅力的で自然なプロフィール文章を生成してください。
+
+設定:
+{settings_text}
+
+要件:
+- 一人称視点で書く
+- 自然で読みやすい文章にする
+- 3-5文程度にまとめる
+- 「です。です。」のような重複を避ける
+- キャラクターの個性が伝わるようにする
+
+プロフィール文章:"""
+            
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=300
+            )
+            
+            generated_text = response.choices[0].message.content.strip()
+            print(f"✨ Generated profile with DeepSeek: {generated_text[:100]}...")
+            return generated_text
+            
+        except Exception as e:
+            print(f"⚠️  LLM profile generation failed, using fallback: {e}")
+            # Fall back to rule-based generation
+    
+    # Fallback: Rule-based generation
     sentences = []
     
     # First person pronoun + gender + age
-    first_person = profile_data.get('first_person', 'わたし')
-    gender = profile_data.get('gender', '')
-    age = profile_data.get('age_range', '')
+    first_person = profile_data.get('first_person', {}).get('value', 'わたし')
+    gender = profile_data.get('gender', {}).get('value', '')
+    age = profile_data.get('age_range', {}).get('value', '')
     
     intro_parts = [first_person]
     if age:
@@ -88,27 +140,27 @@ def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[
         sentences.append(''.join(intro_parts) + "です。")
     
     # Occupation
-    occupation = profile_data.get('occupation', '')
+    occupation = profile_data.get('occupation', {}).get('value', '')
     if occupation:
         sentences.append(f"{occupation}をしています。")
     
     # Hobbies
-    hobbies = profile_data.get('hobbies', '')
+    hobbies = profile_data.get('hobbies', {}).get('value', '')
     if hobbies:
         sentences.append(f"{hobbies}が大好きです。")
     
     # Specialty
-    specialty = profile_data.get('specialty', '')
+    specialty = profile_data.get('specialty', {}).get('value', '')
     if specialty:
         sentences.append(f"{specialty}が得意です。")
     
     # Relationship
-    relationship = profile_data.get('relationship', '')
+    relationship = profile_data.get('relationship', {}).get('value', '')
     if relationship:
         sentences.append(f"あなたの{relationship}として、いつでも力になりたいと思っています。")
     
     # Tone style
-    tone = profile_data.get('tone_style', '')
+    tone = profile_data.get('tone_style', {}).get('value', '')
     if tone:
         if tone == 'です・ます調':
             tone_desc = "丁寧な言葉遣いで話します"
@@ -121,12 +173,12 @@ def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[
         sentences.append(f"{tone_desc}。")
     
     # Catchphrase
-    catchphrase = profile_data.get('catchphrase', '')
+    catchphrase = profile_data.get('catchphrase', {}).get('value', '')
     if catchphrase:
         sentences.append(f"「{catchphrase}」が口癖です。")
     
     # Dialogue stance
-    stance = profile_data.get('dialogue_stance', '')
+    stance = profile_data.get('dialogue_stance', {}).get('value', '')
     if stance:
         sentences.append(f"{stance}ので、安心してくださいね。")
     
