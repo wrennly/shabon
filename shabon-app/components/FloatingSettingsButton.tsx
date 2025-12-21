@@ -10,11 +10,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { BlurView } from 'expo-blur';
 import Constants from 'expo-constants';
+import { FeedbackModal } from './FeedbackModal';
 
 export function FloatingSettingsButton() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const [menuVisible, setMenuVisible] = useState(false);
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   
@@ -84,8 +86,8 @@ export function FloatingSettingsButton() {
   };
 
   const handleFeedback = () => {
-    const feedbackUrl = Constants.expoConfig?.extra?.feedbackFormUrl || 'https://forms.gle/bWYV5a5iGiqabK289';
-    Linking.openURL(feedbackUrl);
+    closeMenu();
+    setTimeout(() => setFeedbackModalVisible(true), 300);
   };
 
   const menuActions = [
@@ -98,6 +100,10 @@ export function FloatingSettingsButton() {
 
   return (
     <>
+      <FeedbackModal 
+        visible={feedbackModalVisible} 
+        onClose={() => setFeedbackModalVisible(false)} 
+      />
       <Pressable 
         onPress={() => menuVisible ? closeMenu() : openMenu()} 
         style={[styles.button, { top: insets.top + 10 }]}
