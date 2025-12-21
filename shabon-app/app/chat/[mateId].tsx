@@ -240,6 +240,13 @@ export default function ChatScreen() {
       ]);
       
       // Set mate details
+      console.log('[Chat] Mate details:', {
+        mate_name: mateResponse.data.mate_name,
+        has_display_profile: !!mateResponse.data.display_profile,
+        has_base_prompt: !!mateResponse.data.base_prompt,
+        display_profile_preview: mateResponse.data.display_profile?.substring(0, 50)
+      });
+      
       setMateName(mateResponse.data.mate_name || 'Unknown');
       setMateImageUrl(mateResponse.data.image_url || null);
       setMateDisplayProfile(mateResponse.data.display_profile || mateResponse.data.base_prompt || null);
