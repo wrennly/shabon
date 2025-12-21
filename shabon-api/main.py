@@ -78,6 +78,8 @@ from utils.rag import (
     format_chat_excerpt,
     set_gemini_model
 )
+from utils.discord_logger import measure_performance
+import time
 
 # DATABASE_URLはログに出力しない（セキュリティリスク）
 logger.info("Database connection initialized")
@@ -212,12 +214,13 @@ async def get_current_user(
 
     # Decode Supabase JWT
     try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
+        with measure_performance("Supabase: JWT検証"):
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )
         # JWTペイロードはログに出力しない（個人情報含む可能性）
         logger.debug("JWT validation successful")
     except jwt.ExpiredSignatureError as e:
@@ -245,18 +248,19 @@ async def get_current_user(
     display_name = user_metadata.get("full_name") or email
 
     # Find or create local user linked to Supabase UID
-    user = session.exec(select(Users).where(Users.supabase_uid == supabase_uid)).first()
+    with measure_performance("Supabase: ユーザー検索/作成"):
+        user = session.exec(select(Users).where(Users.supabase_uid == supabase_uid)).first()
 
-    if not user:
-        # 新規ユーザー作成（created_atとlast_login_atは自動設定）
-        user = Users(
-            supabase_uid=supabase_uid,
-            username=email or supabase_uid,
-            display_name=display_name,
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
+        if not user:
+            # 新規ユーザー作成（created_atとlast_login_atは自動設定）
+            user = Users(
+                supabase_uid=supabase_uid,
+                username=email or supabase_uid,
+                display_name=display_name,
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
 
     # Reactivate deleted users on re-login
     if user.is_deleted:

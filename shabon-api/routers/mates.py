@@ -24,7 +24,7 @@ from utils.cache import (
     get_cached_query_result, set_cached_query_result,
     PUBLIC_MATES_CACHE_TTL
 )
-from utils.discord_logger import log_to_discord, log_error_to_discord, log_success_to_discord
+from utils.discord_logger import log_to_discord, log_error_to_discord, log_success_to_discord, measure_performance
 
 # Router setup
 router = APIRouter(prefix="/mates", tags=["mates"])
@@ -349,7 +349,9 @@ def get_public_mates(
     
     # Check cache first
     cache_key = _make_query_cache_key("public_mates", skip, limit)
-    cached_result = get_cached_query_result(cache_key, PUBLIC_MATES_CACHE_TTL)
+    
+    with measure_performance("Redis: キャッシュ読み取り"):
+        cached_result = get_cached_query_result(cache_key, PUBLIC_MATES_CACHE_TTL)
     
     if cached_result is not None:
         print(f"📊 Using cached result for public_mates (skip={skip}, limit={limit})")
@@ -372,29 +374,30 @@ def get_public_mates(
     
     # Fetch public mates with pagination, ordered by conversation count (popularity)
     # サブクエリで各メイトの会話数をカウント
-    conversation_count = (
-        select(
-            ChatHistory.mate_id,
-            func.count(ChatHistory.id).label('conversation_count')
+    with measure_performance("Supabase: 公開メイトクエリ"):
+        conversation_count = (
+            select(
+                ChatHistory.mate_id,
+                func.count(ChatHistory.id).label('conversation_count')
+            )
+            .group_by(ChatHistory.mate_id)
+            .subquery()
         )
-        .group_by(ChatHistory.mate_id)
-        .subquery()
-    )
-    
-    public_mates = session.exec(
-        select(AiMates)
-        .outerjoin(conversation_count, AiMates.id == conversation_count.c.mate_id)
-        .where(
-            AiMates.is_public == True,
-            AiMates.is_deleted == False
-        )
-        .order_by(
-            func.coalesce(conversation_count.c.conversation_count, 0).desc(),  # 会話数が多い順
-            AiMates.id.desc()  # 同じ会話数なら新しい順
-        )
-        .offset(skip)
-        .limit(limit)
-    ).all()
+        
+        public_mates = session.exec(
+            select(AiMates)
+            .outerjoin(conversation_count, AiMates.id == conversation_count.c.mate_id)
+            .where(
+                AiMates.is_public == True,
+                AiMates.is_deleted == False
+            )
+            .order_by(
+                func.coalesce(conversation_count.c.conversation_count, 0).desc(),  # 会話数が多い順
+                AiMates.id.desc()  # 同じ会話数なら新しい順
+            )
+            .offset(skip)
+            .limit(limit)
+        ).all()
     
     log_to_discord(f"📊 [API] DB取得完了", {"count": len(public_mates)})
     
@@ -404,14 +407,16 @@ def get_public_mates(
 
     # Fetch all settings for these mates in a single query
     mate_ids = [m.id for m in public_mates]
-    all_settings = session.exec(
-        select(MateSettings)
-        .where(MateSettings.mate_id.in_(mate_ids))
-        .options(
-            joinedload(MateSettings.attribute),
-            joinedload(MateSettings.option)
-        )
-    ).all()
+    
+    with measure_performance("Supabase: メイト設定クエリ"):
+        all_settings = session.exec(
+            select(MateSettings)
+            .where(MateSettings.mate_id.in_(mate_ids))
+            .options(
+                joinedload(MateSettings.attribute),
+                joinedload(MateSettings.option)
+            )
+        ).all()
     
     # Group settings by mate_id
     settings_by_mate: Dict[int, List[MateSettings]] = {}
@@ -462,7 +467,9 @@ def get_public_mates(
         }
         for item in response_list
     ]
-    set_cached_query_result(cache_key, cache_data, PUBLIC_MATES_CACHE_TTL)
+    
+    with measure_performance("Redis: キャッシュ書き込み"):
+        set_cached_query_result(cache_key, cache_data, PUBLIC_MATES_CACHE_TTL)
     
     log_success_to_discord(f"✅ [API] 公開メイト返却", {
         "count": len(response_list),

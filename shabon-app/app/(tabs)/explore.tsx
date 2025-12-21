@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingSettingsButton } from '@/components/FloatingSettingsButton';
 import { useIsFocused } from '@react-navigation/native';
 import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
+import { MateDetailModal } from '@/components/MateDetailModal';
 
 interface Mate {
   id: number;
@@ -40,6 +41,8 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const searchInputRef = useRef<TextInput>(null);
+  const [selectedMate, setSelectedMate] = useState<Mate | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   
   // 検索バーの位置アニメーション（初期値は baseBottom）
   const baseBottomInit = Platform.OS === 'ios' ? 140 : 96;
@@ -146,6 +149,19 @@ export default function ExploreScreen() {
     router.push(`/chat/${mate.id}`);
   };
 
+  const handleShowDetail = (mate: Mate, event: any) => {
+    event.stopPropagation();
+    setSelectedMate(mate);
+    setShowDetailModal(true);
+  };
+
+  const handleStartChat = () => {
+    if (selectedMate) {
+      setShowDetailModal(false);
+      router.push(`/chat/${selectedMate.id}`);
+    }
+  };
+
   const filteredMates = publicMates.filter((mate) =>
     mate.mate_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -167,6 +183,19 @@ export default function ExploreScreen() {
       ]}
     >
       <View style={styles.mateCardInner}>
+        {/* 情報アイコン */}
+        <Pressable 
+          onPress={(e) => handleShowDetail(item, e)}
+          style={styles.infoButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons 
+            name="information-circle" 
+            size={24} 
+            color={colorScheme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)'} 
+          />
+        </Pressable>
+
         {/* メイト画像 */}
         <View style={styles.avatarPlaceholder}>
           {item.image_url ? (
@@ -293,6 +322,14 @@ export default function ExploreScreen() {
           )}
         </Animated.View>
       </Animated.View>
+
+      {/* メイト詳細モーダル */}
+      <MateDetailModal
+        visible={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        mate={selectedMate}
+        onStartChat={handleStartChat}
+      />
     </View>
   );
 }
@@ -402,6 +439,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
+    position: 'relative',
+  },
+  infoButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    padding: 4,
   },
   avatarPlaceholder: {
     width: 64,

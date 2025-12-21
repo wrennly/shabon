@@ -9,6 +9,7 @@ import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { BlurView } from 'expo-blur';
 import { BackButton } from '@/components/BackButton';
+import { MateDetailModal } from '@/components/MateDetailModal';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -36,6 +37,9 @@ export default function ChatScreen() {
   const [inputKey, setInputKey] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMateDetailModal, setShowMateDetailModal] = useState(false);
+  const [mateProfilePreview, setMateProfilePreview] = useState<string | null>(null);
   
   // 入力欄のアニメーション
   const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -114,7 +118,17 @@ export default function ChatScreen() {
     router.replace('/(tabs)/chat');
   };
 
-  const handleReportButtonPress = () => {
+  const handleSettingsButtonPress = () => {
+    setShowSettingsModal(true);
+  };
+
+  const handleShowProfile = () => {
+    setShowSettingsModal(false);
+    setShowMateDetailModal(true);
+  };
+
+  const handleShowReport = () => {
+    setShowSettingsModal(false);
     setShowReportModal(true);
   };
 
@@ -212,6 +226,7 @@ export default function ChatScreen() {
       // Set mate details
       setMateName(mateResponse.data.mate_name || 'Unknown');
       setMateImageUrl(mateResponse.data.image_url || null);
+      setMateProfilePreview(mateResponse.data.profile_preview || null);
 
       // Set chat history
       const formattedHistory = historyResponse.data.map((log: ChatHistoryEntry) => ({
@@ -343,12 +358,12 @@ export default function ChatScreen() {
           </View>
           <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
         </View>
-        {/* 迷惑レポートボタン */}
-        <TouchableOpacity onPress={handleReportButtonPress} style={styles.reportButtonContainer}>
+        {/* 設定ボタン */}
+        <TouchableOpacity onPress={handleSettingsButtonPress} style={styles.reportButtonContainer}>
           {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
             <GlassView style={styles.reportButtonGlass} isInteractive>
               <View style={styles.reportButtonInner}>
-                <Ionicons name="flag-outline" size={20} color="#FF3B30" />
+                <Ionicons name="ellipsis-horizontal" size={20} color={theme.glassText} />
               </View>
             </GlassView>
           ) : (
@@ -359,7 +374,7 @@ export default function ChatScreen() {
                 borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
               }
             ]}>
-              <Ionicons name="flag-outline" size={20} color="#FF3B30" />
+              <Ionicons name="ellipsis-horizontal" size={20} color={theme.icon} />
             </View>
           )}
         </TouchableOpacity>
@@ -459,6 +474,60 @@ export default function ChatScreen() {
           )}
         </Animated.View>
       </Animated.View>
+
+      {/* 設定モーダル */}
+      <Modal
+        visible={showSettingsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <View style={styles.settingsModalOverlay}>
+          <Pressable 
+            style={styles.settingsModalBackdrop}
+            onPress={() => setShowSettingsModal(false)}
+          />
+          <View style={[
+            styles.settingsModalContent,
+            { backgroundColor: colorScheme === 'dark' ? 'rgba(28,28,30,0.98)' : 'rgba(255,255,255,0.98)' }
+          ]}>
+            <Pressable 
+              onPress={handleShowProfile}
+              style={styles.settingsOption}
+            >
+              <Ionicons name="information-circle-outline" size={24} color={theme.tint} />
+              <Text style={[styles.settingsOptionText, { color: theme.text }]}>
+                プロフィールを見る
+              </Text>
+            </Pressable>
+            
+            <View style={[styles.settingsDivider, { backgroundColor: theme.icon + '20' }]} />
+            
+            <Pressable 
+              onPress={handleShowReport}
+              style={styles.settingsOption}
+            >
+              <Ionicons name="flag-outline" size={24} color="#FF3B30" />
+              <Text style={[styles.settingsOptionText, { color: '#FF3B30' }]}>
+                不適切なコンテンツを報告
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* メイト詳細モーダル */}
+      <MateDetailModal
+        visible={showMateDetailModal}
+        onClose={() => setShowMateDetailModal(false)}
+        mate={mateId ? {
+          id: parseInt(mateId),
+          mate_name: mateName,
+          image_url: mateImageUrl,
+          profile_preview: mateProfilePreview
+        } : null}
+        showChatButton={false}
+      />
 
       {/* 迷惑レポート確認モーダル */}
       <Modal
@@ -721,7 +790,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.8)',
   },
-  // Modal styles
+  // Settings Modal styles
+  settingsModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  settingsModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  settingsModalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  settingsOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  settingsOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  settingsDivider: {
+    height: 1,
+    marginHorizontal: 20,
+  },
+  // Report Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
