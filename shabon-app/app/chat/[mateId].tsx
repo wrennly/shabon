@@ -265,23 +265,24 @@ export default function ChatScreen() {
 
     const currentText = newMessage;
     const userMessage: ChatMessage = { role: 'user', text: currentText };
-    // 直前のユーザーメッセージは new_message として別途渡すので、
-    // history には「それ以前」のみを送る
     const previousHistory: ChatMessage[] = history;
-    const updatedHistory: ChatMessage[] = [...history, userMessage];
+    
+    // 1. ユーザーメッセージを即座に表示（Optimistic UI）
     lastSentMessageRef.current = currentText;
-    setHistory(updatedHistory);
+    setHistory((prev) => [...prev, userMessage]);
     setNewMessage('');
     setInputKey((prev) => prev + 1);
     setIsThinking(true);
 
+    // 2. バックグラウンドでAIに送信
     try {
       const response = await apiClient.post('/chat/', {
         mate_id: Number(mateId),
-        new_message: newMessage,
+        new_message: currentText,
         history: previousHistory,
       });
 
+      // 3. AIの返信を追加
       const modelMessage: ChatMessage = {
         role: 'model',
         text: response.data.reply_text,
@@ -296,8 +297,6 @@ export default function ChatScreen() {
       setHistory((prev) => [...prev, errorMessage]);
     } finally {
       setIsThinking(false);
-      // 送信ボタン後にまれにテキストが残るケースを補正
-      // まだ入力値が「最後に送ったテキスト」と同じなら、ここでもう一度空文字にする。
       setNewMessage((prev) => (prev === lastSentMessageRef.current ? '' : prev));
     }
   };
@@ -445,19 +444,11 @@ export default function ChatScreen() {
               >
                 {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
                   <GlassView style={styles.sendButtonGlass} isInteractive>
-                    {isThinking ? (
-                      <ActivityIndicator size="small" color={theme.glassText} />
-                    ) : (
-                      <Ionicons name="arrow-up" size={20} color={theme.glassText} />
-                    )}
+                    <Ionicons name="arrow-up" size={20} color={theme.glassText} />
                   </GlassView>
                 ) : (
                   <View style={styles.sendButtonFallback}>
-                    {isThinking ? (
-                      <ActivityIndicator size="small" color={theme.glassText} />
-                    ) : (
-                      <Ionicons name="arrow-up" size={20} color={theme.glassText} />
-                    )}
+                    <Ionicons name="arrow-up" size={20} color={theme.glassText} />
                   </View>
                 )}
               </Pressable>
@@ -484,11 +475,7 @@ export default function ChatScreen() {
                 ]}
               >
                 <View style={styles.sendButtonFallbackDark}>
-                  {isThinking ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
-                  )}
+                  <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
                 </View>
               </Pressable>
             </View>
