@@ -346,7 +346,11 @@ export default function ChatScreen() {
       {/* ヘッダー */}
       <View style={styles.header}>
         <BackButton onPress={handleBack} />
-        <View style={styles.headerCenter}>
+        <TouchableOpacity 
+          style={styles.headerCenter}
+          onPress={() => setShowMateDetailModal(true)}
+          activeOpacity={0.7}
+        >
           {/* メイト画像 */}
           <View style={styles.headerAvatar}>
             {mateImageUrl ? (
@@ -360,7 +364,7 @@ export default function ChatScreen() {
             )}
           </View>
           <Text style={[styles.headerTitle, { color: theme.text }]}>{mateName}</Text>
-        </View>
+        </TouchableOpacity>
         {/* 設定ボタン */}
         <TouchableOpacity onPress={handleSettingsButtonPress} style={styles.settingsButtonContainer}>
           {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
@@ -480,7 +484,7 @@ export default function ChatScreen() {
       <SettingsMenu
         visible={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-        buttonTop={Platform.OS === 'ios' ? 60 : 20}
+        buttonTop={Platform.OS === 'ios' ? 105 : 65}
         buttonRight={16}
         actions={[
           {

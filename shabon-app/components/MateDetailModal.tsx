@@ -70,7 +70,7 @@ export const MateDetailModal: React.FC<MateDetailModalProps> = ({
                       defaultSource={require('@/assets/images/icon.png')}
                     />
                   ) : (
-                    <Ionicons name="person" size={60} color={theme.glassText} />
+                    <Ionicons name="person" size={100} color={theme.glassText} />
                   )}
                 </View>
 
@@ -124,7 +124,7 @@ export const MateDetailModal: React.FC<MateDetailModalProps> = ({
                     defaultSource={require('@/assets/images/icon.png')}
                   />
                 ) : (
-                  <Ionicons name="person" size={60} color={theme.icon} />
+                  <Ionicons name="person" size={100} color={theme.icon} />
                 )}
               </View>
 
@@ -198,9 +198,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   mateImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 200,
+    height: 200,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
