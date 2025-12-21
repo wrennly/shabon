@@ -47,12 +47,21 @@ export function AppHeader({ title, subtitle, children, showLogo = true }: AppHea
 
   console.log('[AppHeader] Render:', { hasPlayedGlobal, shouldMount, showLogo, title });
 
-  // 画面がフォーカスされた時に、既に再生済みならマウントする
+  // 画面がフォーカスされた時に、既に再生済みならマウントする、未再生なら再生する
   useEffect(() => {
     console.log('[AppHeader] useEffect:', { hasPlayedGlobal, shouldMount, showLogo });
-    if (hasPlayedGlobal && !shouldMount && showLogo) {
-      console.log('[AppHeader] Setting shouldMount to true');
-      setShouldMount(true);
+    if (showLogo) {
+      if (hasPlayedGlobal && !shouldMount) {
+        // 既に再生済み → 最終フレームで表示
+        console.log('[AppHeader] Setting shouldMount to true (already played)');
+        setShouldMount(true);
+      } else if (!hasPlayedGlobal && !shouldMount) {
+        // 未再生 → 自動再生
+        console.log('[AppHeader] Auto-playing animation (first time)');
+        hasPlayedGlobal = true;
+        setShouldAutoPlay(true);
+        setShouldMount(true);
+      }
     }
   }, [showLogo, shouldMount]);
 
