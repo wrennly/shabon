@@ -41,10 +41,17 @@ export default function MatesScreen() {
   });
   const CACHE_DURATION = 30000; // 30秒間キャッシュ有効
 
+  const previousFocusedRef = useRef(false);
+
   useEffect(() => {
     if (isFocused) {
-      // チャットから戻った時もキャッシュを使う
+      // 初回表示時はキャッシュを使う、チャット詳細から戻った時はキャッシュを古くする
+      if (previousFocusedRef.current) {
+        // チャット詳細から戻ってきた = キャッシュを古くして次回更新させる
+        cacheRef.current.timestamp = 0;
+      }
       checkAuthAndLoad(false);
+      previousFocusedRef.current = true;
     }
   }, [isFocused]);
 
