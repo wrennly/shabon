@@ -529,6 +529,7 @@ def get_mate_details(
         mate_name=mate.mate_name,
         mate_id=mate.mate_id,
         base_prompt=mate.base_prompt,
+        display_profile=mate.display_profile,
         is_public=mate.is_public,
         image_url=mate.image_url,
         settings=settings_payload

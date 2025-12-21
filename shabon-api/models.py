@@ -202,6 +202,7 @@ class MateEditDetailResponse(SQLModel):
     mate_name: str
     mate_id: Optional[str] = None  # Unique mate ID
     base_prompt: Optional[str] = None  # User's raw prompt
+    display_profile: Optional[str] = None  # Formatted profile for display (bullet points with line breaks)
     is_public: bool
     image_url: Optional[str] = None  # Mate image URL
     settings: List[SettingInput]
