@@ -137,8 +137,8 @@ def create_mate(
             
             settings_for_prompt.append(setting_dict)
         
-        # Generate attractive profile text from attributes
-        profile_text = generate_profile_text(settings_for_prompt, attributes_data)
+        # Generate attractive profile text from attributes (use_llm=False for stability)
+        profile_text = generate_profile_text(settings_for_prompt, attributes_data, use_llm=False)
         
         new_mate = AiMates(
             mate_name=request_data.mate_name,
@@ -641,8 +641,8 @@ def update_mate(
             
             settings_for_prompt.append(setting_dict)
         
-        # Generate and update attractive profile text from attributes
-        profile_text = generate_profile_text(settings_for_prompt, attributes_data)
+        # Generate and update attractive profile text from attributes (use_llm=False for stability)
+        profile_text = generate_profile_text(settings_for_prompt, attributes_data, use_llm=False)
         mate.base_prompt = profile_text if profile_text else None
         
         # 3. 古い「魂の核心 (character_settings)」をぜんぶ DELETE
