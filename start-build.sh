@@ -28,10 +28,13 @@ npx eas submit --platform ios --latest
 
 # ローカルビルド
 cd /Users/ken/dev/shabon/shabon-app
+#　ライブラリ追加時のビルド
+eas build --profile development --platform ios
+# 普通のローカルビルド
 eas build --profile development --platform ios --local
 
 
-# ローカルビルドを実行
+# ローカルビスタート
 npx expo start --dev-client --clear 
 
 # ローカルビルドを実行

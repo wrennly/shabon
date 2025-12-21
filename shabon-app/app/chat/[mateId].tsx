@@ -269,7 +269,8 @@ export default function ChatScreen() {
     
     // 1. ユーザーメッセージを即座に表示（Optimistic UI）
     lastSentMessageRef.current = currentText;
-    setHistory((prev) => [...prev, userMessage]);
+    const updatedHistory = [...previousHistory, userMessage];
+    setHistory(updatedHistory);
     setNewMessage('');
     setInputKey((prev) => prev + 1);
     setIsThinking(true);
@@ -287,7 +288,18 @@ export default function ChatScreen() {
         role: 'model',
         text: response.data.reply_text,
       };
-      setHistory((prev) => [...prev, modelMessage]);
+      const finalHistory = [...updatedHistory, modelMessage];
+      setHistory(finalHistory);
+      
+      // 4. SQLiteに保存（最新の履歴を即座に保存）
+      const historyForSave = finalHistory.map((msg, idx) => ({
+        id: idx + 1,
+        mate_id: parseInt(mateId as string),
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        message_text: msg.text,
+        created_at: new Date().toISOString(),
+      }));
+      await saveChatHistory(parseInt(mateId as string), historyForSave);
     } catch (error) {
       console.error('Failed to send message:', error);
       const errorMessage: ChatMessage = {
