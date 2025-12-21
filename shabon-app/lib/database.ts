@@ -62,6 +62,19 @@ async function initializeTables() {
     CREATE INDEX IF NOT EXISTS idx_public_mates_display_order ON public_mates(display_order);
   `);
 
+  // マイグレーション: display_orderカラムを追加（既存DBのため）
+  try {
+    await db.execAsync(`
+      ALTER TABLE public_mates ADD COLUMN display_order INTEGER DEFAULT 0;
+    `);
+    console.log('[Database] Migration: Added display_order column to public_mates');
+  } catch (error: any) {
+    // カラムが既に存在する場合はエラーを無視
+    if (!error.message.includes('duplicate column name')) {
+      console.log('[Database] display_order column already exists or migration skipped');
+    }
+  }
+
   console.log('[Database] Tables initialized');
 }
 
