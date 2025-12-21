@@ -1,14 +1,27 @@
-name: Keep Alive Render Service
+name: Keep Alive & Monitor Render Service
 
 on:
   schedule:
-    # UTC（協定世界時）で10分おきに実行
-    # (cronの書式。詳しくは'crontab guru'とかで調べてみて)
+    # UTC（協定世界時）で10分おきに実行（Keep Alive）
     - cron: '*/10 * * * *'
+    # 毎日0時（UTC）にリソース監視レポート送信
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 手動実行も可能
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
       - name: Send request to Render API (and DB)
-        run: curl -s "https://chatcraft-api-v3.onrender.com/health-check" > /dev/null
+        run: curl -s "https://api.shabon.studio/health-check" > /dev/null
+
+  resource-monitor:
+    runs-on: ubuntu-latest
+    # 毎日0時のみ実行（10分おきのpingでは実行しない）
+    if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Send Resource Report to Discord
+        env:
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+        run: |
+          curl -s "https://api.shabon.studio/admin/resources/report?admin_key=${ADMIN_SECRET}&send_to_discord=true"

@@ -9,8 +9,8 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 DISCORD_WEBHOOK_URL = os.getenv(
-    "DISCORD_WEBHOOK_URL",
-    "https://discord.com/api/webhooks/1451815084467949622/0BJE0hrp4p7CntPHr-Oz_L3taIaqBz_5jeKEFeaWoCRB6FlQsX7rkVaL8YLXCNYosRXN"
+    "DISCORD_RESOURCE_WEBHOOK_URL",
+    "https://discord.com/api/webhooks/1452419290086117619/Y6qDqTS2hcpHWakKQYVYaJ0uiZN7kLTHsoN1oEtNNJ5SNNXHCf5bfSkAzWoTqMrH6j7k"
 )
 
 def get_system_resources() -> Dict[str, Any]:
