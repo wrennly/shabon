@@ -18,16 +18,22 @@ from sqlalchemy.orm import selectinload
 from models import MAttributes
 
 # Redis configuration
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-try:
-    redis_client: Optional[Redis] = redis.from_url(REDIS_URL, decode_responses=True)
-    redis_client.ping()
-    REDIS_ENABLED = True
-    print("✅ Redis connected")
-except Exception as e:
-    redis_client = None
-    REDIS_ENABLED = False
-    print(f"⚠️  Redis unavailable: {e}. Using in-memory cache.")
+# Redis無効化: Supabaseが十分高速なため、メモリキャッシュのみ使用
+REDIS_ENABLED = False
+redis_client: Optional[Redis] = None
+print("ℹ️  Redis disabled. Using in-memory cache only.")
+
+# 以下はRedis有効化時のコード（現在は無効）
+# REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# try:
+#     redis_client: Optional[Redis] = redis.from_url(REDIS_URL, decode_responses=True)
+#     redis_client.ping()
+#     REDIS_ENABLED = True
+#     print("✅ Redis connected")
+# except Exception as e:
+#     redis_client = None
+#     REDIS_ENABLED = False
+#     print(f"⚠️  Redis unavailable: {e}. Using in-memory cache.")
 
 # Cache configuration
 CACHE_DURATION = timedelta(hours=1)
