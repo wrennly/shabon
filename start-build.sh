@@ -32,7 +32,7 @@ eas build --profile development --platform ios --local
 
 
 # ローカルビルドを実行
-npx expo start --dev-client
+npx expo start --dev-client --clear 
 
 # ローカルビルドを実行
 npx expo run:ios

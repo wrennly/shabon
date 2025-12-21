@@ -5,198 +5,253 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { router } from 'expo-router';
 
 interface MateDetailModalProps {
-  visible: boolean;
+  isVisible: boolean;
   onClose: () => void;
   mate: {
     id: number;
     mate_name: string;
+    mate_id?: string;
     image_url?: string | null;
     profile_preview?: string | null;
+    base_prompt?: string | null;
   } | null;
-  onStartChat?: () => void;
   showChatButton?: boolean;
 }
 
-export function MateDetailModal({ 
-  visible, 
+export const MateDetailModal: React.FC<MateDetailModalProps> = ({ 
+  isVisible, 
   onClose, 
   mate, 
-  onStartChat,
   showChatButton = true 
-}: MateDetailModalProps) {
+}) => {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
   if (!mate) return null;
 
+  const handleChatPress = () => {
+    onClose();
+    router.push(`/chat/${mate.id}`);
+  };
+
   return (
     <Modal
-      visible={visible}
+      visible={isVisible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={[
-          styles.modalContent,
-          { backgroundColor: colorScheme === 'dark' ? 'rgba(28,28,30,0.98)' : 'rgba(255,255,255,0.98)' }
-        ]}>
-          {/* ヘッダー */}
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              メイト詳細
-            </Text>
-            <Pressable 
-              onPress={onClose}
-              style={styles.modalCloseButton}
-            >
-              <Ionicons name="close" size={24} color={theme.icon} />
-            </Pressable>
-          </View>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable 
+          style={styles.modalContentWrapper} 
+          onPress={(e) => e.stopPropagation()}
+        >
+          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+            <GlassView style={styles.modalGlass} isInteractive>
+              <View style={styles.modalContent}>
+                {/* 閉じるボタン */}
+                <Pressable 
+                  onPress={onClose} 
+                  style={styles.closeButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="close-circle" size={32} color={theme.glassText} />
+                </Pressable>
 
-          <ScrollView style={styles.modalScrollView}>
-            {/* メイト画像 */}
-            {mate.image_url ? (
-              <Image 
-                source={{ uri: mate.image_url }} 
-                style={styles.mateImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={[styles.mateImagePlaceholder, { backgroundColor: theme.card }]}>
-                <Ionicons name="person" size={60} color={theme.icon} />
+                {/* メイト画像 */}
+                <View style={styles.mateImageContainer}>
+                  {mate.image_url ? (
+                    <Image 
+                      source={{ uri: mate.image_url }} 
+                      style={styles.mateImage}
+                      defaultSource={require('@/assets/images/icon.png')}
+                    />
+                  ) : (
+                    <Ionicons name="person" size={60} color={theme.glassText} />
+                  )}
+                </View>
+
+                {/* メイト名 */}
+                <Text style={[styles.mateName, { color: theme.glassText }]}>
+                  {mate.mate_name}
+                </Text>
+
+                {/* メイトID */}
+                {mate.mate_id && (
+                  <Text style={[styles.mateId, { color: theme.glassText }]}>
+                    @{mate.mate_id}
+                  </Text>
+                )}
+
+                {/* プロフィール */}
+                <ScrollView style={styles.profileScrollView}>
+                  <Text style={[styles.profileTitle, { color: theme.glassText }]}>
+                    プロフィール
+                  </Text>
+                  <Text style={[styles.profileText, { color: theme.glassText }]}>
+                    {mate.base_prompt || mate.profile_preview || 'プロフィールが設定されていません。'}
+                  </Text>
+                </ScrollView>
+
+                {/* チャットボタン */}
+                {showChatButton && (
+                  <Pressable onPress={handleChatPress} style={styles.chatButton}>
+                    <Text style={styles.chatButtonText}>チャットする</Text>
+                  </Pressable>
+                )}
               </View>
-            )}
+            </GlassView>
+          ) : (
+            <View style={[styles.modalContentFallback, { backgroundColor: theme.card }]}>
+              {/* 閉じるボタン */}
+              <Pressable 
+                onPress={onClose} 
+                style={styles.closeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close-circle" size={32} color={theme.icon} />
+              </Pressable>
 
-            {/* メイト名 */}
-            <Text style={[styles.mateName, { color: theme.text }]}>
-              {mate.mate_name}
-            </Text>
+              {/* メイト画像 */}
+              <View style={[styles.mateImageContainer, { backgroundColor: theme.background }]}>
+                {mate.image_url ? (
+                  <Image 
+                    source={{ uri: mate.image_url }} 
+                    style={styles.mateImage}
+                    defaultSource={require('@/assets/images/icon.png')}
+                  />
+                ) : (
+                  <Ionicons name="person" size={60} color={theme.icon} />
+                )}
+              </View>
 
-            {/* プロフィール */}
-            {mate.profile_preview && (
-              <View style={styles.profileSection}>
-                <Text style={[styles.sectionTitle, { color: theme.icon }]}>
+              {/* メイト名 */}
+              <Text style={[styles.mateName, { color: theme.text }]}>
+                {mate.mate_name}
+              </Text>
+
+              {/* メイトID */}
+              {mate.mate_id && (
+                <Text style={[styles.mateId, { color: theme.icon }]}>
+                  @{mate.mate_id}
+                </Text>
+              )}
+
+              {/* プロフィール */}
+              <ScrollView style={styles.profileScrollView}>
+                <Text style={[styles.profileTitle, { color: theme.text }]}>
                   プロフィール
                 </Text>
                 <Text style={[styles.profileText, { color: theme.text }]}>
-                  {mate.profile_preview}
+                  {mate.base_prompt || mate.profile_preview || 'プロフィールが設定されていません。'}
                 </Text>
-              </View>
-            )}
-          </ScrollView>
+              </ScrollView>
 
-          {/* チャットボタン */}
-          {showChatButton && onStartChat && (
-            <Pressable onPress={onStartChat} style={{ marginTop: 16 }}>
-              {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
-                <GlassView style={styles.chatButtonGlass} isInteractive>
-                  <Ionicons name="chatbubble" size={20} color={theme.glassText} style={{ marginRight: 8 }} />
-                  <Text style={[styles.chatButtonTextGlass, { color: theme.glassText }]}>
-                    チャットする
-                  </Text>
-                </GlassView>
-              ) : (
-                <View style={[styles.chatButton, { backgroundColor: theme.tint }]}>
-                  <Ionicons name="chatbubble" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              {/* チャットボタン */}
+              {showChatButton && (
+                <Pressable onPress={handleChatPress} style={styles.chatButton}>
                   <Text style={styles.chatButtonText}>チャットする</Text>
-                </View>
+                </Pressable>
               )}
-            </Pressable>
+            </View>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    maxHeight: '80%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modalScrollView: {
-    marginBottom: 16,
-  },
-  mateImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  mateImagePlaceholder: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    marginBottom: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalContentWrapper: {
+    width: '85%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalGlass: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  modalContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalContentFallback: {
+    padding: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+  },
+  mateImageContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  mateImage: {
+    width: '100%',
+    height: '100%',
+  },
   mateName: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: 'bold',
+    marginBottom: 4,
     textAlign: 'center',
+  },
+  mateId: {
+    fontSize: 16,
+    marginBottom: 16,
+    opacity: 0.7,
+  },
+  profileScrollView: {
+    maxHeight: 200,
+    width: '100%',
     marginBottom: 20,
   },
-  profileSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
+  profileTitle: {
     fontSize: 13,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
+    opacity: 0.7,
   },
   profileText: {
     fontSize: 15,
     lineHeight: 22,
+    textAlign: 'center',
   },
   chatButton: {
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   chatButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#FFFFFF',
-  },
-  chatButtonGlass: {
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50,
-  },
-  chatButtonTextGlass: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
 });

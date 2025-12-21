@@ -39,7 +39,8 @@ export default function ChatScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMateDetailModal, setShowMateDetailModal] = useState(false);
-  const [mateProfilePreview, setMateProfilePreview] = useState<string | null>(null);
+  const [mateBasePrompt, setMateBasePrompt] = useState<string | null>(null);
+  const [mateMateId, setMateMateId] = useState<string | null>(null);
   
   // 入力欄のアニメーション
   const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -226,7 +227,8 @@ export default function ChatScreen() {
       // Set mate details
       setMateName(mateResponse.data.mate_name || 'Unknown');
       setMateImageUrl(mateResponse.data.image_url || null);
-      setMateProfilePreview(mateResponse.data.profile_preview || null);
+      setMateBasePrompt(mateResponse.data.base_prompt || null);
+      setMateMateId(mateResponse.data.mate_id || null);
 
       // Set chat history
       const formattedHistory = historyResponse.data.map((log: ChatHistoryEntry) => ({
@@ -518,13 +520,14 @@ export default function ChatScreen() {
 
       {/* メイト詳細モーダル */}
       <MateDetailModal
-        visible={showMateDetailModal}
+        isVisible={showMateDetailModal}
         onClose={() => setShowMateDetailModal(false)}
         mate={mateId ? {
           id: parseInt(mateId),
           mate_name: mateName,
+          mate_id: mateMateId || undefined,
           image_url: mateImageUrl,
-          profile_preview: mateProfilePreview
+          base_prompt: mateBasePrompt
         } : null}
         showChatButton={false}
       />
