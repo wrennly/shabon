@@ -85,11 +85,11 @@ export async function saveChatHistory(mateId: number, messages: any[]) {
   // 既存の履歴を削除
   await database.runAsync('DELETE FROM chat_history WHERE mate_id = ?', [mateId]);
   
-  // 新しい履歴を保存
+  // 新しい履歴を保存（idは自動採番）
   for (const msg of messages) {
     await database.runAsync(
-      'INSERT INTO chat_history (id, mate_id, role, message_text, created_at) VALUES (?, ?, ?, ?, ?)',
-      [msg.id, mateId, msg.role, msg.message_text, msg.created_at]
+      'INSERT INTO chat_history (mate_id, role, message_text, created_at) VALUES (?, ?, ?, ?)',
+      [mateId, msg.role, msg.message_text, msg.created_at]
     );
   }
   
