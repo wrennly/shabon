@@ -11,6 +11,7 @@ import { BlurView } from 'expo-blur';
 import { BackButton } from '@/components/BackButton';
 import { MateDetailModal } from '@/components/MateDetailModal';
 import { SettingsMenu } from '@/components/SettingsMenu';
+import { getChatHistory, saveChatHistory } from '@/lib/database';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -217,7 +218,19 @@ export default function ChatScreen() {
     try {
       setLoading(true);
       
-      // Load mate details and chat history in parallel for faster loading
+      // 1. SQLiteキャッシュから即座に表示
+      const cachedHistory = await getChatHistory(parseInt(mateId as string));
+      if (cachedHistory.length > 0) {
+        console.log(`[Chat] Loaded ${cachedHistory.length} messages from SQLite cache`);
+        const formattedCached = cachedHistory.map((log: any) => ({
+          role: log.role === 'user' ? 'user' : 'model',
+          text: log.message_text,
+        }));
+        setHistory(formattedCached);
+        setLoading(false);
+      }
+      
+      // 2. APIから最新データを取得
       const [mateResponse, historyResponse] = await Promise.all([
         apiClient.get(`/mates/${mateId}/details`).catch(() =>
           apiClient.get(`/mates/public-details/${mateId}`)
@@ -237,6 +250,9 @@ export default function ChatScreen() {
         text: log.message_text,
       }));
       setHistory(formattedHistory || []);
+      
+      // 3. SQLiteに保存
+      await saveChatHistory(parseInt(mateId as string), historyResponse.data);
     } catch (error) {
       console.error('Failed to load chat history:', error);
     } finally {
