@@ -55,9 +55,11 @@ async function initializeTables() {
       profile_preview TEXT,
       image_url TEXT,
       created_at TEXT,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      display_order INTEGER DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_public_mates_updated_at ON public_mates(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_public_mates_display_order ON public_mates(display_order);
   `);
 
   console.log('[Database] Tables initialized');
@@ -134,11 +136,12 @@ export async function savePublicMates(mates: any[]) {
   // 既存の公開メイトを削除
   await database.runAsync('DELETE FROM public_mates');
   
-  // 新しい公開メイトを保存
-  for (const mate of mates) {
+  // 新しい公開メイトを保存（APIから取得した順番を保持するため、display_orderを追加）
+  for (let i = 0; i < mates.length; i++) {
+    const mate = mates[i];
     await database.runAsync(
-      'INSERT INTO public_mates (id, mate_name, mate_id, profile_preview, image_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [mate.id, mate.mate_name, mate.mate_id, mate.profile_preview, mate.image_url, mate.created_at, now]
+      'INSERT INTO public_mates (id, mate_name, mate_id, profile_preview, image_url, created_at, updated_at, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [mate.id, mate.mate_name, mate.mate_id, mate.profile_preview, mate.image_url, mate.created_at, now, i]
     );
   }
   
@@ -149,7 +152,8 @@ export async function savePublicMates(mates: any[]) {
 export async function getPublicMates() {
   const database = await openDatabase();
   
-  const result = await database.getAllAsync('SELECT * FROM public_mates ORDER BY id DESC');
+  // display_orderでソート（APIから取得した順番を保持）
+  const result = await database.getAllAsync('SELECT * FROM public_mates ORDER BY display_order ASC');
   
   console.log(`[Database] Loaded ${result.length} public mates`);
   return result;
