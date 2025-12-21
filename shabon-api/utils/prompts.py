@@ -39,6 +39,100 @@ def normalize_base_prompt(raw_prompt: Optional[str]) -> str:
     return normalized
 
 
+def generate_profile_text(settings: List[Dict[str, Any]], attributes_data: List[Dict[str, Any]]) -> str:
+    """
+    Generate attractive profile text from mate settings.
+    Converts structured settings into a natural, flowing narrative.
+    
+    Args:
+        settings: List of mate settings (from mate_settings table)
+        attributes_data: List of attribute definitions (from m_attributes table)
+    
+    Returns:
+        Natural profile text suitable for display
+    """
+    # Create attribute lookup map
+    attr_map = {attr['attribute_key']: attr for attr in attributes_data}
+    
+    # Extract key information
+    profile_data = {}
+    for setting in settings:
+        attr_key = setting.get('attribute_key')
+        if attr_key and attr_key in attr_map:
+            attr = attr_map[attr_key]
+            attr_type = attr.get('attribute_type', '')
+            
+            if attr_type == 'select':
+                value = setting.get('option_value', '')
+            else:
+                value = setting.get('custom_value', '')
+            
+            if value:
+                profile_data[attr_key] = value
+    
+    # Build natural profile text
+    sentences = []
+    
+    # First person pronoun + gender + age
+    first_person = profile_data.get('first_person', 'わたし')
+    gender = profile_data.get('gender', '')
+    age = profile_data.get('age_range', '')
+    
+    intro_parts = [first_person]
+    if age:
+        intro_parts.append(f"{age}の")
+    if gender:
+        intro_parts.append(f"{gender}")
+    
+    if len(intro_parts) > 1:
+        sentences.append(''.join(intro_parts) + "です。")
+    
+    # Occupation
+    occupation = profile_data.get('occupation', '')
+    if occupation:
+        sentences.append(f"{occupation}をしています。")
+    
+    # Hobbies
+    hobbies = profile_data.get('hobbies', '')
+    if hobbies:
+        sentences.append(f"{hobbies}が大好きです。")
+    
+    # Specialty
+    specialty = profile_data.get('specialty', '')
+    if specialty:
+        sentences.append(f"{specialty}が得意です。")
+    
+    # Relationship
+    relationship = profile_data.get('relationship', '')
+    if relationship:
+        sentences.append(f"あなたの{relationship}として、いつでも力になりたいと思っています。")
+    
+    # Tone style
+    tone = profile_data.get('tone_style', '')
+    if tone:
+        if tone == 'です・ます調':
+            tone_desc = "丁寧な言葉遣いで話します"
+        elif tone == 'タメ口':
+            tone_desc = "フランクに話します"
+        elif tone == 'カジュアル敬語':
+            tone_desc = "親しみやすい敬語で話します"
+        else:
+            tone_desc = f"{tone}で話します"
+        sentences.append(f"{tone_desc}。")
+    
+    # Catchphrase
+    catchphrase = profile_data.get('catchphrase', '')
+    if catchphrase:
+        sentences.append(f"「{catchphrase}」が口癖です。")
+    
+    # Dialogue stance
+    stance = profile_data.get('dialogue_stance', '')
+    if stance:
+        sentences.append(f"{stance}ので、安心してくださいね。")
+    
+    return ''.join(sentences)
+
+
 def build_attribute_prompt(settings: List[Dict[str, Any]], attributes_data: List[Dict[str, Any]]) -> str:
     """
     Build attribute-based prompt from mate settings.

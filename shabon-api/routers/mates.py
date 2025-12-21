@@ -91,7 +91,7 @@ def create_mate(
             mate_id = generate_mate_id(session)
         
         # settingsからbase_promptを自動生成
-        from utils.prompts import normalize_base_prompt, build_attribute_prompt
+        from utils.prompts import normalize_base_prompt, build_attribute_prompt, generate_profile_text
         
         # Get all attributes with type and display_name
         attributes = session.exec(select(MAttributes)).all()
@@ -137,14 +137,13 @@ def create_mate(
             
             settings_for_prompt.append(setting_dict)
         
-        # Generate base_prompt from attributes
-        generated_prompt = build_attribute_prompt(settings_for_prompt, attributes_data)
-        normalized_prompt = normalize_base_prompt(generated_prompt) if generated_prompt else None
+        # Generate attractive profile text from attributes
+        profile_text = generate_profile_text(settings_for_prompt, attributes_data)
         
         new_mate = AiMates(
             mate_name=request_data.mate_name,
             mate_id=mate_id,
-            base_prompt=normalized_prompt,
+            base_prompt=profile_text if profile_text else None,
             user_id=current_user.id,
             is_public=request_data.is_public
         )
@@ -596,7 +595,7 @@ def update_mate(
             mate.mate_id = request_data.mate_id
         
         # settingsからbase_promptを自動生成
-        from utils.prompts import normalize_base_prompt, build_attribute_prompt
+        from utils.prompts import normalize_base_prompt, build_attribute_prompt, generate_profile_text
         
         # Get all attributes with type and display_name
         attributes = session.exec(select(MAttributes)).all()
@@ -642,9 +641,9 @@ def update_mate(
             
             settings_for_prompt.append(setting_dict)
         
-        # Generate and update base_prompt from attributes
-        generated_prompt = build_attribute_prompt(settings_for_prompt, attributes_data)
-        mate.base_prompt = normalize_base_prompt(generated_prompt) if generated_prompt else None
+        # Generate and update attractive profile text from attributes
+        profile_text = generate_profile_text(settings_for_prompt, attributes_data)
+        mate.base_prompt = profile_text if profile_text else None
         
         # 3. 古い「魂の核心 (character_settings)」をぜんぶ DELETE
         old_settings = session.exec(
