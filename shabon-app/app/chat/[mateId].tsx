@@ -10,6 +10,7 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { BlurView } from 'expo-blur';
 import { BackButton } from '@/components/BackButton';
 import { MateDetailModal } from '@/components/MateDetailModal';
+import { BottomSlideMenu } from '@/components/BottomSlideMenu';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -477,46 +478,24 @@ export default function ChatScreen() {
         </Animated.View>
       </Animated.View>
 
-      {/* 設定モーダル */}
-      <Modal
+      {/* 設定メニュー */}
+      <BottomSlideMenu
         visible={showSettingsModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowSettingsModal(false)}
-      >
-        <View style={styles.settingsModalOverlay}>
-          <Pressable 
-            style={styles.settingsModalBackdrop}
-            onPress={() => setShowSettingsModal(false)}
-          />
-          <View style={[
-            styles.settingsModalContent,
-            { backgroundColor: colorScheme === 'dark' ? 'rgba(28,28,30,0.98)' : 'rgba(255,255,255,0.98)' }
-          ]}>
-            <Pressable 
-              onPress={handleShowProfile}
-              style={styles.settingsOption}
-            >
-              <Ionicons name="information-circle-outline" size={24} color={theme.tint} />
-              <Text style={[styles.settingsOptionText, { color: theme.text }]}>
-                プロフィールを見る
-              </Text>
-            </Pressable>
-            
-            <View style={[styles.settingsDivider, { backgroundColor: theme.icon + '20' }]} />
-            
-            <Pressable 
-              onPress={handleShowReport}
-              style={styles.settingsOption}
-            >
-              <Ionicons name="flag-outline" size={24} color="#FF3B30" />
-              <Text style={[styles.settingsOptionText, { color: '#FF3B30' }]}>
-                不適切なコンテンツを報告
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowSettingsModal(false)}
+        actions={[
+          {
+            title: 'プロフィールを見る',
+            icon: <Ionicons name="information-circle-outline" size={24} color={theme.tint} />,
+            onPress: handleShowProfile,
+          },
+          {
+            title: '不適切なコンテンツを報告',
+            icon: <Ionicons name="flag-outline" size={24} color="#FF3B30" />,
+            onPress: handleShowReport,
+            isDestructive: true,
+          },
+        ]}
+      />
 
       {/* メイト詳細モーダル */}
       <MateDetailModal
@@ -792,36 +771,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.8)',
-  },
-  // Settings Modal styles
-  settingsModalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  settingsModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  settingsModalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-  },
-  settingsOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  settingsOptionText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  settingsDivider: {
-    height: 1,
-    marginHorizontal: 20,
   },
   // Report Modal styles
   modalOverlay: {
