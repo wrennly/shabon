@@ -150,7 +150,8 @@ vec4 main(vec2 fragCoord) {
     float lightDot = dot(normalize(p), lightDir); // 1.0 at Top-Left, -1.0 at Bottom-Right
     
     // 左上と右下の両方で虹を強く（中心付近は弱く）
-    float topLeftStrength = smoothstep(-0.3, 0.8, lightDot);      // 左上が強い
+    // 左上のエリアを広げる（-0.3 → -0.5, 0.8 → 1.0）
+    float topLeftStrength = smoothstep(-0.5, 1.0, lightDot);      // 左上が強い（エリア拡大）
     float bottomRightStrength = smoothstep(-0.8, 0.3, -lightDot); // 右下が強い
     float cornerStrength = max(topLeftStrength, bottomRightStrength);
     
