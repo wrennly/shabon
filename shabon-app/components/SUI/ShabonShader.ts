@@ -137,14 +137,14 @@ vec4 main(vec2 fragCoord) {
     vec2 lightDir = normalize(vec2(-1.0, -1.0)); // Top-Left direction
     float lightDot = dot(normalize(p), lightDir); // 1.0 at Top-Left, -1.0 at Bottom-Right
     
-    // Mask: 0.1 (中心部分も虹を見せる) at Top-Left, 1.0 (full rainbow) at Bottom-Right
+    // Mask: 左上を明るく、右下を暗くして立体感を強調
     // lightDot is 1.0 at Top-Left, -1.0 at Bottom-Right.
     // We want 1.0 (Full) when lightDot is low (Bottom-Right).
     // smoothstep(-0.2, 0.8, lightDot) -> 0.0 at Bottom-Right, 1.0 at Top-Left.
     // Invert it to get the mask we want.
     float lightingMask = 1.0 - smoothstep(-0.2, 0.8, lightDot); 
-    // Clamp to ensure we don't go below a minimum visibility (0.4に上げて中心部分も色を乗せる)
-    lightingMask = max(0.2, lightingMask);
+    // 右下の虹を弱める（0.2 → 0.15 に変更）
+    lightingMask = max(0.15, lightingMask);
     
     rainbowMask *= lightingMask;
     
@@ -158,10 +158,10 @@ vec4 main(vec2 fragCoord) {
     float highlight = smoothstep(0.65, 0.7, f) * 0.5; // Softer highlight
     
     // 5. Top-Left White Highlight (新規追加)
-    // 左上に白いハイライトを追加
+    // 左上に白いハイライトを追加（強度アップ）
     vec2 highlightPos = vec2(-0.25, -0.25); // 左上の位置
     float highlightDist = length(p - highlightPos);
-    float topLeftHighlight = smoothstep(0.3, 0.0, highlightDist) * 0.6; // 0.6は強度
+    float topLeftHighlight = smoothstep(0.35, 0.0, highlightDist) * 0.85; // 0.6 → 0.85 に強化、範囲も拡大
     
     // 6. Edge Glow (立体感のある縁の光 - LiquidGlass風)
     // ダークモードは縁を狭く
@@ -172,11 +172,12 @@ vec4 main(vec2 fragCoord) {
     // lightDot: 1.0 (左上), -1.0 (右下)
     
     // 左上と右下で強い光沢（フレネル風）
+    // 左上を強化、右下を弱化して立体感を強調
     float topLeftGlow = smoothstep(-0.3, 1.0, lightDot);      // 左上が強い
     float bottomRightGlow = smoothstep(-1.0, 0.3, -lightDot); // 右下が強い
     
-    // 合成：左上と右下で縁が厚く光る
-    float edgeGlow = edgeBase * (topLeftGlow * 0.8 + bottomRightGlow * 0.6);
+    // 合成：左上を強化（0.8 → 1.2）、右下を弱化（0.6 → 0.3）
+    float edgeGlow = edgeBase * (topLeftGlow * 1.2 + bottomRightGlow * 0.3);
     // ダークモードは縁の強度を下げる
     float edgeStrength = mix(1.2, 0.7, iIsDark);
     edgeGlow = pow(edgeGlow, 0.5) * edgeStrength;
@@ -210,13 +211,13 @@ vec4 main(vec2 fragCoord) {
     baseColor = mix(baseColor, baseColor * 1.15, rainbowDepth * 0.3);
     
     // Add top-left white highlight
-    // ダークモードは左上ハイライトも抑える
-    float highlightStrength = mix(1.0, 0.4, iIsDark);
+    // ダークモードは左上ハイライトも抑える（ただし強度アップ）
+    float highlightStrength = mix(1.2, 0.5, iIsDark); // 1.0 → 1.2, 0.4 → 0.5 に強化
     baseColor = mix(baseColor, vec3(1.0), topLeftHighlight * highlightStrength);
     
     // Add edge glow (立体感のある縁の光)
-    // ダークモードは縁の光沢を抑える
-    float edgeGlowStrength = mix(0.7, 0.25, iIsDark);
+    // ダークモードは縁の光沢を抑える（左上を強調）
+    float edgeGlowStrength = mix(0.85, 0.35, iIsDark); // 0.7 → 0.85, 0.25 → 0.35 に強化
     baseColor = mix(baseColor, vec3(1.0), edgeGlow * edgeGlowStrength);
     
     // --- Transparency (Alpha) ---
