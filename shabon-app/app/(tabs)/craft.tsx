@@ -21,7 +21,7 @@ import { BlurView } from 'expo-blur';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { PublicSettingsModal } from '@/components/PublicSettingsModal';
 import { getSchema, saveSchema } from '@/lib/database';
-import { logToDiscord, logSuccessToDiscord, logErrorToDiscord } from '@/services/discord';
+import { logToDiscord, logSuccessToDiscord, logErrorToDiscord } from '@/services/discord_logger';
 
 interface AttributeOption {
   value: string;
