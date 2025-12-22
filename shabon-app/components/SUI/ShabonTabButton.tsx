@@ -58,7 +58,7 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                 StyleSheet.absoluteFill,
                 { borderRadius: borderRadius, overflow: 'hidden' }
             ]}>
-                {shader && isActive && (
+                {shader && (
                     <Canvas style={StyleSheet.absoluteFill}>
                         <Rect x={0} y={0} width={size} height={size}>
                             <Shader
@@ -68,8 +68,10 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                                     iResolution: vec(size, size),
                                     iIsDark: isDark ? 1.0 : 0.0,
                                     iRoundness: 1.0,
-                                    iRainbowStrength: 2.0,
-                                    iFillAlpha: 0.3,
+                                    // 選択時: 虹を強く (2.0), 非選択時: 虹を控えめに (0.8)
+                                    iRainbowStrength: isActive ? 2.0 : 0.8,
+                                    // 選択時: 少し不透明 (0.3), 非選択時: より透明 (0.15)
+                                    iFillAlpha: isActive ? 0.3 : 0.15,
                                 }}
                             />
                         </Rect>
