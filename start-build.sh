@@ -32,7 +32,7 @@ cd /Users/ken/dev/shabon/shabon-app
 eas build --profile development --platform ios
 # 普通のローカルビルド
 eas build --profile development --platform ios --local
-
+cd /Users/ken/dev/shabon/shabon-app && eas build --profile development --platform ios --local
 
 # ローカルビスタート
 npx expo start --dev-client --clear 
@@ -42,3 +42,6 @@ npx expo run:ios
 
 # ローカルビルドを実行
 npx expo run:android
+
+# 本番同様に動かす
+cd /Users/ken/dev/shabon/shabon-app && npx expo run:ios --configuration Release

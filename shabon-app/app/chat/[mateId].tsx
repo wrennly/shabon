@@ -232,12 +232,15 @@ export default function ChatScreen() {
       }
       
       // 2. APIから最新データを取得
+      console.log('[Chat] Fetching mate details and history...', { mateId });
       const [mateResponse, historyResponse] = await Promise.all([
-        apiClient.get(`/mates/${mateId}/details`).catch(() =>
-          apiClient.get(`/mates/public-details/${mateId}`)
-        ),
+        apiClient.get(`/mates/${mateId}/details`).catch((err) => {
+          console.log('[Chat] Private mate details failed, trying public...', err.message);
+          return apiClient.get(`/mates/public-details/${mateId}`);
+        }),
         apiClient.get(`/chat/history/${mateId}`)
       ]);
+      console.log('[Chat] API responses received');
       
       // Set mate details
       console.log('[Chat] Mate details:', {
@@ -261,8 +264,15 @@ export default function ChatScreen() {
       
       // 3. SQLiteに保存
       await saveChatHistory(parseInt(mateId as string), historyResponse.data);
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
+    } catch (error: any) {
+      console.error('[Chat] Failed to load chat history:', error);
+      console.error('[Chat] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      // エラー時でもローディングを解除
+      setLoading(false);
     } finally {
       setLoading(false);
     }
