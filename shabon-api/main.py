@@ -287,7 +287,7 @@ async def get_current_user(
     "/settings/schema", 
     response_model=SettingsSchemaResponse
 )
-def get_settings_schema(session: Session = Depends(get_session)):
+async def get_settings_schema(session: Session = Depends(get_session)):
     """Get attribute schema with caching"""
     
     # Use cache for attribute master data

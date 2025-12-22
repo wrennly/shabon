@@ -66,7 +66,7 @@ def generate_mate_id(session: Session) -> str:
             return mate_id
 
 @router.post("/")
-def create_mate(
+async def create_mate(
     request_data: MateCreateRequest, 
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
@@ -212,7 +212,7 @@ def create_mate(
         raise HTTPException(status_code=500, detail=f"DB保存エラー: {str(e)}")
 
 @router.get("/", response_model=List[MateInfoResponse])
-def get_my_mates(
+async def get_my_mates(
     current_user: Users = Depends(current_user_dependency), 
     session: Session = Depends(get_session),
     filter_type: Optional[str] = Query(None, alias="filter"),
@@ -343,39 +343,14 @@ def get_my_mates(
     return response_list
 
 @router.get("/public", response_model=List[MateInfoResponse])
-def get_public_mates(
+async def get_public_mates(
     session: Session = Depends(get_session),
     skip: int = Query(0, ge=0, description="Skip N mates"),
     limit: int = Query(20, ge=1, le=100, description="Limit results to N mates")
 ):
-    """Get all public AI mates with pagination and query caching"""
+    """Get all public AI mates with pagination (async)"""
     
     log_to_discord(f"🌍 [API] 公開メイト取得開始", {"skip": skip, "limit": limit})
-    
-    # Check cache first
-    cache_key = _make_query_cache_key("public_mates", skip, limit)
-    
-    with measure_performance("Redis: キャッシュ読み取り"):
-        cached_result = get_cached_query_result(cache_key, PUBLIC_MATES_CACHE_TTL)
-    
-    if cached_result is not None:
-        print(f"📊 Using cached result for public_mates (skip={skip}, limit={limit})")
-        log_to_discord(f"💾 [API] キャッシュから返却", {"count": len(cached_result)})
-        return [
-            MateInfoResponse(
-                id=item["id"],
-                mate_name=item["mate_name"],
-                mate_id=item["mate_id"],
-                created_at=item.get("created_at"),
-                updated_at=item.get("updated_at"),
-                profile_preview=item.get("profile_preview"),
-                image_url=item.get("image_url")
-            )
-            for item in cached_result
-        ]
-    
-    print(f"📊 Cache miss for public_mates - fetching from DB")
-    log_to_discord(f"🔍 [API] キャッシュミス - DBから取得")
     
     # Fetch public mates with pagination, ordered by conversation count (popularity)
     # サブクエリで各メイトの会話数をカウント
@@ -461,22 +436,6 @@ def get_public_mates(
         )
     
     # Cache the result
-    cache_data = [
-        {
-            "id": item.id,
-            "mate_name": item.mate_name,
-            "mate_id": item.mate_id,
-            "created_at": item.created_at.isoformat() if item.created_at else None,
-            "updated_at": item.updated_at.isoformat() if item.updated_at else None,
-            "profile_preview": item.profile_preview,
-            "image_url": item.image_url
-        }
-        for item in response_list
-    ]
-    
-    with measure_performance("Redis: キャッシュ書き込み"):
-        set_cached_query_result(cache_key, cache_data, PUBLIC_MATES_CACHE_TTL)
-    
     log_success_to_discord(f"✅ [API] 公開メイト返却", {
         "count": len(response_list),
         "mates": [{"id": m.id, "name": m.mate_name} for m in response_list]
@@ -485,7 +444,7 @@ def get_public_mates(
     return response_list
 
 @router.get("/{mate_id}/details", response_model=MateEditDetailResponse)
-def get_mate_details(
+async def get_mate_details(
     mate_id: int,
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
@@ -536,7 +495,7 @@ def get_mate_details(
     )
 
 @router.get("/public-details/{mate_id}")
-def get_public_character_details(
+async def get_public_character_details(
     mate_id: int,
     session: Session = Depends(get_session)
 ):
@@ -567,7 +526,7 @@ def get_public_character_details(
     }
 
 @router.put("/{mate_id}", response_model=MateInfoResponse)
-def update_mate(
+async def update_mate(
     mate_id: int,
     request_data: MateCreateRequest, # (「作る」ときと「同じ設計図」を受け取る！)
     current_user: Users = Depends(current_user_dependency),
@@ -721,7 +680,7 @@ def update_mate(
         raise HTTPException(status_code=500, detail=f"DB更新エラー: {str(e)}")
 
 @router.delete("/{mate_id}")
-def delete_mate(
+async def delete_mate(
     mate_id: int,
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
@@ -757,7 +716,7 @@ def delete_mate(
         raise HTTPException(status_code=500, detail=f"削除エラー: {str(e)}")
 
 @router.get("/search-by-mate-id/{mate_id}")
-def search_character_by_mate_id(
+async def search_character_by_mate_id(
     mate_id: str,
     session: Session = Depends(get_session)
 ):
@@ -785,7 +744,7 @@ def search_character_by_mate_id(
     }
 
 @router.get("/check-mate-id/{mate_id}")
-def check_mate_id_availability(
+async def check_mate_id_availability(
     mate_id: str,
     session: Session = Depends(get_session)
 ):
@@ -810,7 +769,7 @@ def check_mate_id_availability(
     return {"available": True}
 
 @router.post("/{mate_id}/toggle-public", response_model=MateInfoResponse)
-def toggle_character_public_status(
+async def toggle_character_public_status(
     mate_id: int,
     request_data: MatePublicRequest,
     current_user: Users = Depends(current_user_dependency),
@@ -840,7 +799,7 @@ def toggle_character_public_status(
     )
 
 @router.post("/batch/details", response_model=BatchMateResponseWrapper)
-def get_batch_mate_details(
+async def get_batch_mate_details(
     request: BatchMateRequest,
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
@@ -938,7 +897,7 @@ def get_batch_mate_details(
     )
 
 @router.post("/batch/info", response_model=List[MateInfoResponse])
-def get_batch_mate_info(
+async def get_batch_mate_info(
     request: BatchMateRequest,
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
@@ -1094,7 +1053,7 @@ async def upload_mate_image(
         raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
 @router.delete("/{mate_id}/image")
-def delete_mate_image(
+async def delete_mate_image(
     mate_id: int,
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
