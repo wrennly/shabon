@@ -44,8 +44,10 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
     
     // デバッグ用ログ
     useEffect(() => {
-        console.log('[ShabonTabButton] Shader loaded:', !!shader);
-        console.log('[ShabonTabButton] isActive:', isActive);
+        console.log('[ShabonTabButton] 🧪 TEST MODE - Shader loaded:', !!shader);
+        console.log('[ShabonTabButton] 🧪 TEST MODE - isActive:', isActive);
+        console.log('[ShabonTabButton] 🧪 TEST MODE - time.value:', time.value);
+        console.log('[ShabonTabButton] 🧪 TEST MODE - size:', size);
     }, [shader, isActive]);
     
     const borderRadius = size / 2;
@@ -67,8 +69,9 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                 StyleSheet.absoluteFill,
                 { borderRadius: borderRadius, overflow: 'hidden' }
             ]}>
-                {shader && isActive ? (
-                    <Canvas style={StyleSheet.absoluteFill}>
+                {/* 🧪 TEST: 強制表示モード（shader && isActive の代わりに true） */}
+                {shader ? (
+                    <Canvas style={[StyleSheet.absoluteFill, { zIndex: 1 }]}>
                         <Shader
                             source={shader}
                             uniforms={{
@@ -82,7 +85,7 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                         />
                     </Canvas>
                 ) : (
-                    // 非選択時はシンプルな背景
+                    // Shaderがない場合のフォールバック
                     <View style={[
                         StyleSheet.absoluteFill,
                         {
@@ -94,7 +97,7 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
             </View>
             
             {/* 子要素（アイコンなど） */}
-            <View style={styles.contentContainer}>
+            <View style={[styles.contentContainer, { zIndex: 10 }]}>
                 {children}
             </View>
         </TouchableOpacity>
