@@ -143,8 +143,8 @@ vec4 main(vec2 fragCoord) {
     
     // 対角線上（左上↔右下）で虹が強く、離れるほど弱くなる
     // iRainbowStrength が高いほど、対角線マスクの範囲を広げる（上と左にも虹が広がる）
-    // 通常: 0.4, 強い時: 0.6-0.7 くらいまで広がる
-    float diagonalWidth = mix(0.4, 0.7, clamp((iRainbowStrength - 2.0) / 2.0, 0.0, 1.0));
+    // 通常: 0.4, 強い時: 0.55 くらいまで広がる（0.7 → 0.55 に抑える）
+    float diagonalWidth = mix(0.4, 0.55, clamp((iRainbowStrength - 2.0) / 2.0, 0.0, 1.0));
     float diagonalMask = 1.0 - smoothstep(0.0, diagonalWidth, diagonalDist);
     
     // 左上と右下で虹の強度を調整
@@ -152,8 +152,8 @@ vec4 main(vec2 fragCoord) {
     float lightDot = dot(normalize(p), lightDir); // 1.0 at Top-Left, -1.0 at Bottom-Right
     
     // 左上と右下の両方で虹を強く（中心付近は弱く）
-    // iRainbowStrength が高いほど、左上のエリアをさらに広げる
-    float topLeftStart = mix(-0.5, -0.7, clamp((iRainbowStrength - 2.0) / 2.0, 0.0, 1.0));
+    // iRainbowStrength が高いほど、左上のエリアをさらに広げる（-0.7 → -0.6 に抑える）
+    float topLeftStart = mix(-0.5, -0.6, clamp((iRainbowStrength - 2.0) / 2.0, 0.0, 1.0));
     float topLeftStrength = smoothstep(topLeftStart, 1.0, lightDot);      // 左上が強い（エリア拡大）
     float bottomRightStrength = smoothstep(-0.8, 0.3, -lightDot); // 右下が強い
     float cornerStrength = max(topLeftStrength, bottomRightStrength);
@@ -205,8 +205,8 @@ vec4 main(vec2 fragCoord) {
     vec3 centerColor = mix(vec3(0.88), vec3(0.0), iIsDark);
     
     // Apply rainbow based on rainbowMask
-    // Reduced mix strength to make rainbow more subtle (was 0.9)
-    vec3 baseColor = mix(centerColor, rainbow, rainbowMask * 0.6);
+    // Reduced mix strength to make rainbow more subtle (was 0.9, now 0.5)
+    vec3 baseColor = mix(centerColor, rainbow, rainbowMask * 0.5);
     
     // 7. Rainbow Depth Effect (虹に立体感を追加)
     // 虹のエリアにグラデーションを追加して奥行き感を出す
