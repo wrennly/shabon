@@ -90,10 +90,8 @@ vec4 main(vec2 fragCoord) {
     vec3 colorLight = paletteLight(rainbowInput);
     vec3 colorDark = paletteDark(rainbowInput);
     
-    // ダークモードは少しだけ明るく（白を混ぜる量を減らす: 0.35 → 0.2）
-    colorDark = mix(colorDark, vec3(0.85), 0.2);
-    
-    vec3 rainbow = mix(colorLight, colorDark, iIsDark);
+    // 🧪 TEST: ダークモードもライトモードと同じ色味を使う
+    vec3 rainbow = colorLight; // mix(colorLight, colorDark, iIsDark) を無効化
     
     // 3. Fresnel / Edge Glow (The "Bubble" 3D look)
     
