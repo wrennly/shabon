@@ -66,7 +66,7 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                         <Shader
                             source={shader}
                             uniforms={{
-                                iTime: time,
+                                iTime: time.value,
                                 iResolution: vec(size, size),
                                 iIsDark: isDark ? 1.0 : 0.0,
                                 iRoundness: 1.0, // 完全な円
