@@ -105,16 +105,6 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                         />
                     )}
                 </Canvas>
-                ) : (
-                    // Shaderがない場合のフォールバック
-                    <View style={[
-                        StyleSheet.absoluteFill,
-                        {
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                            borderRadius: borderRadius,
-                        }
-                    ]} />
-                )}
             </View>
             
             {/* 子要素（アイコンなど） */}
