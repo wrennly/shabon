@@ -350,53 +350,46 @@ async def get_public_mates(
 ):
     """Get all public AI mates with pagination (async)"""
     
-    log_to_discord(f"🌍 [API] 公開メイト取得開始", {"skip": skip, "limit": limit})
-    
     # Fetch public mates with pagination, ordered by conversation count (popularity)
     # サブクエリで各メイトの会話数をカウント
-    with measure_performance("Supabase: 公開メイトクエリ"):
-        conversation_count = (
-            select(
-                ChatHistory.mate_id,
-                func.count(ChatHistory.id).label('conversation_count')
-            )
-            .group_by(ChatHistory.mate_id)
-            .subquery()
+    conversation_count = (
+        select(
+            ChatHistory.mate_id,
+            func.count(ChatHistory.id).label('conversation_count')
         )
-        
-        public_mates = session.exec(
-            select(AiMates)
-            .outerjoin(conversation_count, AiMates.id == conversation_count.c.mate_id)
-            .where(
-                AiMates.is_public == True,
-                AiMates.is_deleted == False
-            )
-            .order_by(
-                func.coalesce(conversation_count.c.conversation_count, 0).desc(),  # 会話数が多い順
-                AiMates.id.desc()  # 同じ会話数なら新しい順
-            )
-            .offset(skip)
-            .limit(limit)
-        ).all()
+        .group_by(ChatHistory.mate_id)
+        .subquery()
+    )
     
-    log_to_discord(f"📊 [API] DB取得完了", {"count": len(public_mates)})
+    public_mates = session.exec(
+        select(AiMates)
+        .outerjoin(conversation_count, AiMates.id == conversation_count.c.mate_id)
+        .where(
+            AiMates.is_public == True,
+            AiMates.is_deleted == False
+        )
+        .order_by(
+            func.coalesce(conversation_count.c.conversation_count, 0).desc(),  # 会話数が多い順
+            AiMates.id.desc()  # 同じ会話数なら新しい順
+        )
+        .offset(skip)
+        .limit(limit)
+    ).all()
     
     if not public_mates:
-        log_to_discord(f"⚠️ [API] 公開メイトが0件")
         return []
 
     # Fetch all settings for these mates in a single query
     mate_ids = [m.id for m in public_mates]
     
-    with measure_performance("Supabase: メイト設定クエリ"):
-        all_settings = session.exec(
-            select(MateSettings)
-            .where(MateSettings.mate_id.in_(mate_ids))
-            .options(
-                joinedload(MateSettings.attribute),
-                joinedload(MateSettings.option)
-            )
-        ).all()
+    all_settings = session.exec(
+        select(MateSettings)
+        .where(MateSettings.mate_id.in_(mate_ids))
+        .options(
+            joinedload(MateSettings.attribute),
+            joinedload(MateSettings.option)
+        )
+    ).all()
     
     # Group settings by mate_id
     settings_by_mate: Dict[int, List[MateSettings]] = {}
@@ -405,13 +398,13 @@ async def get_public_mates(
             settings_by_mate[setting.mate_id] = []
         settings_by_mate[setting.mate_id].append(setting)
     
+    # Cache attributes once (not per mate)
+    attribute_key_map = {attr.id: attr for attr in get_attributes_cache(session)}
+    
     # Build response list
     response_list = []
     for mate in public_mates:
         profile_parts = []
-        
-        # Get profile from cached attributes
-        attribute_key_map = {attr.id: attr for attr in get_attributes_cache(session)}
         
         for setting in settings_by_mate.get(mate.id, []):
             if setting.attribute and setting.attribute.attribute_key in ['personality', 'tone', 'hobby', 'age']:
@@ -434,12 +427,6 @@ async def get_public_mates(
                 display_profile=mate.display_profile  # 箇条書きプロフィール
             )
         )
-    
-    # Cache the result
-    log_success_to_discord(f"✅ [API] 公開メイト返却", {
-        "count": len(response_list),
-        "mates": [{"id": m.id, "name": m.mate_name} for m in response_list]
-    })
     
     return response_list
 
