@@ -21,7 +21,6 @@ import { BlurView } from 'expo-blur';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { PublicSettingsModal } from '@/components/PublicSettingsModal';
 import { getSchema, saveSchema } from '@/lib/database';
-import { logToDiscord, logSuccessToDiscord, logErrorToDiscord } from '@/services/discord_logger';
 
 interface AttributeOption {
   value: string;
@@ -130,15 +129,10 @@ export default function MateBuilderScreen() {
   const loadSchema = async () => {
     console.log('🔍 [Craft] loadSchema START');
     try {
-      console.log('🔍 [Craft] Calling logToDiscord...');
-      await logToDiscord('📋 [Craft] スキーマ読み込み開始');
-      console.log('🔍 [Craft] logToDiscord done');
-      
       // 1. SQLiteキャッシュから即座に表示
       const cachedSchemaData = await getSchema();
       if (cachedSchemaData) {
         console.log('🔍 [Craft] Using SQLite cache:', cachedSchemaData?.length);
-        await logToDiscord('💾 [Craft] SQLiteキャッシュから読み込み', { attributesCount: cachedSchemaData.length });
         setSchema(cachedSchemaData);
         setLoading(false);
         
@@ -149,7 +143,6 @@ export default function MateBuilderScreen() {
       // 2. メモリキャッシュチェック（既にSQLiteから読み込んでいる場合はスキップ）
       if (cachedSchema && !cachedSchemaData) {
         console.log('🔍 [Craft] Using memory cache:', cachedSchema?.length);
-        await logToDiscord('💾 [Craft] メモリキャッシュから読み込み', { attributesCount: cachedSchema.length });
         setSchema(cachedSchema);
         setLoading(false);
         return;
@@ -157,9 +150,7 @@ export default function MateBuilderScreen() {
       
       // 3. APIから最新データを取得（バックグラウンドで更新）
       console.log('🔍 [Craft] Fetching from API...');
-      await logToDiscord('📡 [Craft] /settings/schema API呼び出し');
       const response = await apiClient.get('/settings/schema');
-      await logSuccessToDiscord('✅ [Craft] スキーマ取得成功', { attributesCount: response.data.attributes.length });
       
       const sortedAttributes = response.data.attributes.sort(
         (a: SchemaAttribute, b: SchemaAttribute) => a.display_order - b.display_order
@@ -169,13 +160,13 @@ export default function MateBuilderScreen() {
       cachedSchema = sortedAttributes;
       await saveSchema(sortedAttributes);
       setSchema(sortedAttributes);
+      console.log('🔍 [Craft] Schema loaded successfully');
     } catch (error: any) {
       console.log('🔍 [Craft] ERROR:', error);
       // 502/503エラー（サーバー一時的ダウン）の場合は静かに処理
       if (error.response?.status === 502 || error.response?.status === 503) {
         console.log('⚠️ Server temporarily unavailable, using cache');
       } else {
-        await logErrorToDiscord('🔴 [Craft] スキーマ読み込みエラー', error);
         console.error('Failed to load schema:', error);
         if (error.response?.status === 401) {
           router.replace('/login');
