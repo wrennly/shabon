@@ -226,13 +226,13 @@ vec4 main(vec2 fragCoord) {
     baseColor = mix(baseColor, baseColor * 1.15, rainbowDepth * 0.3);
     
     // Add top-right white highlight
-    // ダークモードは右上ハイライトも抑える（ただし強度アップ）
-    float highlightStrength = mix(1.2, 0.5, iIsDark); // 1.0 → 1.2, 0.4 → 0.5 に強化
+    // ダークモードは右上ハイライトを大幅に抑える（銀色っぽさを消す）
+    float highlightStrength = mix(1.2, 0.15, iIsDark); // ダークモード: 0.5 → 0.15 に大幅減
     baseColor = mix(baseColor, vec3(1.0), topRightHighlight * highlightStrength);
     
     // Add edge glow (立体感のある縁の光)
-    // ダークモードは縁の光沢を抑える（左上を強調）
-    float edgeGlowStrength = mix(0.85, 0.35, iIsDark); // 0.7 → 0.85, 0.25 → 0.35 に強化
+    // ダークモードは縁の白い光沢を大幅に減らす（銀色っぽさを消す）
+    float edgeGlowStrength = mix(0.85, 0.05, iIsDark); // ダークモード: 0.35 → 0.05 に大幅減
     baseColor = mix(baseColor, vec3(1.0), edgeGlow * edgeGlowStrength);
     
     // --- Transparency (Alpha) ---
@@ -277,10 +277,13 @@ vec4 main(vec2 fragCoord) {
     vec3 finalColor = baseColor;
     
     // Add extra white glow on the very edge and highlights
-    // Reduced intensity to let rainbow show through (was 0.2)
-    finalColor += vec3(1.0) * fresnel * 0.15;
+    // ダークモードは縁の白い光沢を大幅に減らす（銀色っぽさを消す）
+    float fresnelStrength = mix(0.15, 0.02, iIsDark); // ダークモード: 0.15 → 0.02
+    finalColor += vec3(1.0) * fresnel * fresnelStrength;
     // Only add highlight color if we are showing highlights (based on fill alpha)
-    finalColor += vec3(1.0) * highlight * iFillAlpha;
+    // ダークモードはハイライトも減らす
+    float highlightFinalStrength = mix(1.0, 0.1, iIsDark);
+    finalColor += vec3(1.0) * highlight * iFillAlpha * highlightFinalStrength;
     
     
     return vec4(finalColor * alpha, alpha);
