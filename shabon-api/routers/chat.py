@@ -65,15 +65,15 @@ async def current_user_dependency(
 
 
 @router.post("/", response_model=ChatResponse)
-def chat_with_ai(
+async def chat_with_ai(
     request_data: ChatRequest,
     current_user: Users = Depends(current_user_dependency),
     session: Session = Depends(get_session)
 ):
-    """AIとチャット（RAG統合版）"""
+    """AIとチャット（RAG統合版・非同期対応）"""
     model = get_model()
     if not model:
-        raise HTTPException(status_code=500, detail="Gemini model not initialized")
+        raise HTTPException(status_code=500, detail="AI model not initialized")
     
     print(f"💬 POST /chat/ - User: {current_user.id}, Mate: {request_data.mate_id}")
     # データベースからAIキャラクターを取得
@@ -195,9 +195,9 @@ def chat_with_ai(
                 "content": msg.text
             })
         
-        # Call DeepSeek API
+        # Call DeepSeek API (async)
         try:
-            ai_reply_text = model.chat(
+            ai_reply_text = await model.chat(
                 system_prompt=final_system_prompt,
                 history=history_messages,
                 user_message=request_data.new_message,

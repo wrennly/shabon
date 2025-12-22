@@ -21,7 +21,7 @@ from models import MAttributes
 # Redis無効化: Supabaseが十分高速なため、メモリキャッシュのみ使用
 REDIS_ENABLED = False
 redis_client: Optional[Redis] = None
-print("ℹ️  Redis disabled. Using in-memory cache only.")
+#print("ℹ️  Redis disabled. Using in-memory cache only.")
 
 # 以下はRedis有効化時のコード（現在は無効）
 # REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")

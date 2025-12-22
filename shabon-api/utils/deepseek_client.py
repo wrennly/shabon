@@ -2,18 +2,18 @@
 """
 DeepSeek API Client
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DeepSeek v3を使った会話生成
+DeepSeek v3を使った会話生成（非同期対応）
 """
 
 import os
 from typing import List, Dict, Optional
-from openai import OpenAI
+from openai import AsyncOpenAI
 import logging
 
 logger = logging.getLogger(__name__)
 
 class DeepSeekClient:
-    """DeepSeek API Client"""
+    """DeepSeek API Client (Async)"""
     
     def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.deepseek.com"):
         """
@@ -27,13 +27,13 @@ class DeepSeekClient:
         if not self.api_key:
             raise ValueError("DEEPSEEK_API_KEY is required")
         
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=self.api_key,
             base_url=base_url
         )
         self.model = "deepseek-chat"
     
-    def chat(
+    async def chat(
         self,
         system_prompt: str,
         history: List[Dict[str, str]],
@@ -42,7 +42,7 @@ class DeepSeekClient:
         max_tokens: int = 2000
     ) -> str:
         """
-        Generate chat response
+        Generate chat response (async)
         
         Args:
             system_prompt: System prompt (character settings)
@@ -66,8 +66,8 @@ class DeepSeekClient:
             # Add current message
             messages.append({"role": "user", "content": user_message})
             
-            # Call API
-            response = self.client.chat.completions.create(
+            # Call API (async)
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
@@ -86,13 +86,13 @@ class DeepSeekClient:
             logger.error(f"DeepSeek API error: {str(e)}")
             raise
     
-    def generate_summary(
+    async def generate_summary(
         self,
         conversation: str,
         categories: List[str]
     ) -> str:
         """
-        Generate conversation summary for RAG
+        Generate conversation summary for RAG (async)
         
         Args:
             conversation: Conversation text to summarize
@@ -115,7 +115,7 @@ class DeepSeekClient:
 """
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "あなたは会話を簡潔に要約する専門家です。"},
