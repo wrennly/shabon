@@ -1,7 +1,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Canvas, Shader, vec, Circle, Fill, Skia } from '@shopify/react-native-skia';
+import { Canvas, Shader, vec, Circle, Fill, Skia, Rect, Group } from '@shopify/react-native-skia';
 import { useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { getShabonShader } from './ShabonShader';
 
@@ -98,14 +98,16 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                         backgroundColor: 'rgba(0,255,0,0.3)'  // 🟢 緑の背景でCanvas自体を確認
                     }
                 ]}>
-                    {/* 🧪 TEST: シンプルなShaderでテスト */}
+                    {/* 🧪 TEST: Shader を Rect で描画 */}
                     {simpleShaderSource ? (
-                        <Shader
-                            source={simpleShaderSource}
-                            uniforms={{
-                                resolution: vec(size, size),
-                            }}
-                        />
+                        <Rect x={0} y={0} width={size} height={size}>
+                            <Shader
+                                source={simpleShaderSource}
+                                uniforms={{
+                                    resolution: vec(size, size),
+                                }}
+                            />
+                        </Rect>
                     ) : (
                         <>
                             {/* 🔵 Shader がない場合のフォールバック */}
