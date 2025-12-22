@@ -90,9 +90,12 @@ vec4 main(vec2 fragCoord) {
     vec3 colorLight = paletteLight(rainbowInput);
     vec3 colorDark = paletteDark(rainbowInput);
     
-    // ダークモードは虹を少し暗くする
+    // ダークモードは虹を少し暗くして、白をグレーに寄せる
     vec3 rainbow = colorLight;
-    rainbow = mix(rainbow, rainbow * 0.7, iIsDark); // ダークモード: 30% 暗くする
+    // 暗くする (30% 減)
+    rainbow = mix(rainbow, rainbow * 0.7, iIsDark);
+    // 白い部分をグレーに (最大値を0.85に制限)
+    rainbow = mix(rainbow, min(rainbow, vec3(0.85)), iIsDark);
     
     // 3. Fresnel / Edge Glow (The "Bubble" 3D look)
     
@@ -181,7 +184,7 @@ vec4 main(vec2 fragCoord) {
     
     // 6. Edge Glow (立体感のある縁の光 - LiquidGlass風)
     // ダークモードは縁をさらに狭く（細く）
-    float edgeInner = mix(0.42, 0.75, iIsDark); // ダークモード: 0.45 → 0.47 に変更（より細く）
+    float edgeInner = mix(0.62, 0.75, iIsDark); // ダークモード: 0.45 → 0.47 に変更（より細く）
     float edgeBase = smoothstep(edgeInner, 0.5, dist) * smoothstep(0.5, edgeInner, dist);
     
     // 既存のlightDotを再利用（133-134行目で定義済み）

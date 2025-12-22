@@ -142,10 +142,16 @@ export default function ExploreScreen() {
       // 3. SQLiteに保存
       await savePublicMates(response.data);
     } catch (error: any) {
-      await logErrorToDiscord('🔴 ERROR: 公開メイト取得失敗', error);
-      console.error('Failed to load public mates:', error);
-      if (error.response?.status === 401) {
-        router.replace('/login');
+      // 502/503エラー（サーバー一時的ダウン）の場合は静かに処理
+      if (error.response?.status === 502 || error.response?.status === 503) {
+        console.log('⚠️ Server temporarily unavailable, using cache');
+        // キャッシュがあれば表示されているので、エラーログは出さない
+      } else {
+        await logErrorToDiscord('🔴 ERROR: 公開メイト取得失敗', error);
+        console.error('Failed to load public mates:', error);
+        if (error.response?.status === 401) {
+          router.replace('/login');
+        }
       }
     } finally {
       setLoading(false);
