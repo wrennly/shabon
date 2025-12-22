@@ -42,6 +42,12 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
     
     const shader = getShabonShader();
     
+    // デバッグ用ログ
+    useEffect(() => {
+        console.log('[ShabonTabButton] Shader loaded:', !!shader);
+        console.log('[ShabonTabButton] isActive:', isActive);
+    }, [shader, isActive]);
+    
     const borderRadius = size / 2;
     
     return (
