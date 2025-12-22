@@ -62,6 +62,15 @@ async function initializeTables() {
     CREATE INDEX IF NOT EXISTS idx_public_mates_display_order ON public_mates(display_order);
   `);
 
+  // スキーマキャッシュテーブル（メイト作成画面の項目）
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS schema_cache (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      schema_data TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
   // マイグレーション: display_orderカラムを追加（既存DBのため）
   try {
     await db.execAsync(`
@@ -172,6 +181,38 @@ export async function getPublicMates() {
   return result;
 }
 
+// スキーマを保存
+export async function saveSchema(schema: any[]) {
+  const database = await openDatabase();
+  
+  // 既存のスキーマを削除
+  await database.execAsync('DELETE FROM schema_cache');
+  
+  // 新しいスキーマを保存
+  await database.runAsync(
+    'INSERT INTO schema_cache (schema_data, updated_at) VALUES (?, ?)',
+    [JSON.stringify(schema), new Date().toISOString()]
+  );
+  
+  console.log(`[Database] Saved schema with ${schema.length} attributes`);
+}
+
+// スキーマを取得
+export async function getSchema() {
+  const database = await openDatabase();
+  
+  const result = await database.getFirstAsync('SELECT schema_data FROM schema_cache ORDER BY id DESC LIMIT 1');
+  
+  if (result && (result as any).schema_data) {
+    const schema = JSON.parse((result as any).schema_data);
+    console.log(`[Database] Loaded schema with ${schema.length} attributes`);
+    return schema;
+  }
+  
+  console.log('[Database] No cached schema found');
+  return null;
+}
+
 // データベースをクリア（デバッグ用）
 export async function clearDatabase() {
   const database = await openDatabase();
@@ -180,6 +221,7 @@ export async function clearDatabase() {
     DELETE FROM chat_history;
     DELETE FROM mates;
     DELETE FROM public_mates;
+    DELETE FROM schema_cache;
   `);
   
   console.log('[Database] Cleared all data');

@@ -16,6 +16,7 @@ import AnimatedSplash from '@/components/AnimatedSplash';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, asyncStoragePersister } from '@/lib/queryClient';
+import { preloadSchema } from '@/services/preload';
 
 // Initialize Sentry (only on native platforms - iOS/Android)
 // Web monitoring is handled separately to avoid SSR/dependency conflicts
@@ -42,6 +43,11 @@ export default function RootLayout() {
     // アセットのロードが完了したらアプリ準備完了
     if (assets && skiaLoaded) {
       setAppReady(true);
+      
+      // バックグラウンドでスキーマをプリロード
+      preloadSchema().catch(err => {
+        console.log('[App] Schema preload failed:', err);
+      });
     }
   }, [assets, skiaLoaded]);
 
