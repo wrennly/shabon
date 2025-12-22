@@ -57,12 +57,12 @@ vec3 paletteLight(float t) {
 
 // Soft, dreamy palette for Dark Mode
 vec3 paletteDark(float t) {
-    // Much softer, pastel-like colors for dark mode
-    // Inspired by aurora and night sky
-    vec3 a = vec3(0.5, 0.5, 0.6);   // Lighter base (more visible)
-    vec3 b = vec3(0.15, 0.15, 0.2); // Very low saturation (soft)
+    // Warmer, more colorful palette for dark mode
+    // Inspired by sunset and warm aurora
+    vec3 a = vec3(0.6, 0.55, 0.65);   // Warmer base (pink/purple tint)
+    vec3 b = vec3(0.25, 0.22, 0.28);  // Higher saturation (more colorful)
     vec3 c = vec3(1.0, 1.0, 1.0);
-    vec3 d = vec3(0.263, 0.416, 0.557);
+    vec3 d = vec3(0.0, 0.25, 0.5);    // Warmer color shift (pink → orange → blue)
     return a + b * cos(6.28318 * (c * t + d));
 }
 
@@ -90,8 +90,8 @@ vec4 main(vec2 fragCoord) {
     vec3 colorLight = paletteLight(rainbowInput);
     vec3 colorDark = paletteDark(rainbowInput);
     
-    // ダークモードはよりパステルに（白を混ぜる）
-    colorDark = mix(colorDark, vec3(0.85), 0.35);
+    // ダークモードは少しだけ明るく（白を混ぜる量を減らす: 0.35 → 0.2）
+    colorDark = mix(colorDark, vec3(0.85), 0.2);
     
     vec3 rainbow = mix(colorLight, colorDark, iIsDark);
     
