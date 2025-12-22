@@ -1,9 +1,19 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Canvas, Shader, vec, Circle, Fill } from '@shopify/react-native-skia';
+import { Canvas, Shader, vec, Circle, Fill, Skia } from '@shopify/react-native-skia';
 import { useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { getShabonShader } from './ShabonShader';
+
+// 🧪 超シンプルなテスト用Shader
+const simpleShaderSource = Skia.RuntimeEffect.Make(`
+uniform vec2 resolution;
+vec4 main(vec2 fragCoord) {
+    vec2 uv = fragCoord / resolution;
+    // グラデーション（左上：赤、右下：青）
+    return vec4(uv.x, 0.5, uv.y, 1.0);
+}
+`);
 
 interface ShabonTabButtonProps {
     onPress?: () => void;
@@ -88,17 +98,12 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                         backgroundColor: 'rgba(0,255,0,0.3)'  // 🟢 緑の背景でCanvas自体を確認
                     }
                 ]}>
-                    {/* 🌈 Shader（最初に描画） */}
-                    {shader ? (
+                    {/* 🧪 TEST: シンプルなShaderでテスト */}
+                    {simpleShaderSource ? (
                         <Shader
-                            source={shader}
+                            source={simpleShaderSource}
                             uniforms={{
-                                iTime: time.value,
-                                iResolution: vec(size, size),
-                                iIsDark: isDark ? 1.0 : 0.0,
-                                iRoundness: 1.0,
-                                iRainbowStrength: 2.0,
-                                iFillAlpha: 0.3,
+                                resolution: vec(size, size),
                             }}
                         />
                     ) : (
