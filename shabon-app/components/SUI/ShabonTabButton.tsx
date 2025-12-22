@@ -1,7 +1,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Canvas, Shader, vec } from '@shopify/react-native-skia';
+import { Canvas, Shader, vec, Circle, Fill } from '@shopify/react-native-skia';
 import { useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { getShabonShader } from './ShabonShader';
 
@@ -69,21 +69,42 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                 StyleSheet.absoluteFill,
                 { borderRadius: borderRadius, overflow: 'hidden' }
             ]}>
-                {/* 🧪 TEST: 強制表示モード（shader && isActive の代わりに true） */}
-                {shader ? (
-                    <Canvas style={[StyleSheet.absoluteFill, { zIndex: 1 }]}>
+                {/* 🧪 TEST: Canvasの可視性テスト用に背景色追加 */}
+                <View style={[
+                    StyleSheet.absoluteFill,
+                    { 
+                        backgroundColor: 'rgba(255,0,0,0.3)',  // 🔴 赤い背景でCanvas領域を確認
+                        zIndex: 0 
+                    }
+                ]} />
+                
+                {/* 🧪 TEST: シンプルなCanvas描画テスト */}
+                <Canvas style={[
+                    StyleSheet.absoluteFill, 
+                    { 
+                        zIndex: 1,
+                        backgroundColor: 'rgba(0,255,0,0.3)'  // 🟢 緑の背景でCanvas自体を確認
+                    }
+                ]}>
+                    {/* 🔵 青い円を描画（Shaderなし） - これが見えればCanvasは動いてる */}
+                    <Fill color="rgba(0,0,255,0.5)" />
+                    <Circle cx={size / 2} cy={size / 2} r={size / 3} color="cyan" />
+                    
+                    {/* 🌈 Shader（これが見えない） */}
+                    {shader && (
                         <Shader
                             source={shader}
                             uniforms={{
                                 iTime: time.value,
                                 iResolution: vec(size, size),
                                 iIsDark: isDark ? 1.0 : 0.0,
-                                iRoundness: 1.0, // 完全な円
-                                iRainbowStrength: 2.0, // 虹の強度（選択時は強め）
-                                iFillAlpha: 0.3, // 中心の透明度
+                                iRoundness: 1.0,
+                                iRainbowStrength: 2.0,
+                                iFillAlpha: 0.3,
                             }}
                         />
-                    </Canvas>
+                    )}
+                </Canvas>
                 ) : (
                     // Shaderがない場合のフォールバック
                     <View style={[
