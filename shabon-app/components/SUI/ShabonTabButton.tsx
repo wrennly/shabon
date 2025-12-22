@@ -1,19 +1,9 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Canvas, Shader, vec, Circle, Fill, Skia, Rect, Group } from '@shopify/react-native-skia';
+import { Canvas, Shader, vec, Rect } from '@shopify/react-native-skia';
 import { useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { getShabonShader } from './ShabonShader';
-
-// 🧪 超シンプルなテスト用Shader
-const simpleShaderSource = Skia.RuntimeEffect.Make(`
-uniform vec2 resolution;
-vec4 main(vec2 fragCoord) {
-    vec2 uv = fragCoord / resolution;
-    // グラデーション（左上：赤、右下：青）
-    return vec4(uv.x, 0.5, uv.y, 1.0);
-}
-`);
 
 interface ShabonTabButtonProps {
     onPress?: () => void;
@@ -25,10 +15,8 @@ interface ShabonTabButtonProps {
 /**
  * Skia版のシャボン玉タブボタン
  * 
- * 使い方：
- * 1. ShabonTabButton.tsx を ShabonTabButton.gradient.tsx にリネーム
- * 2. このファイルを ShabonTabButton.tsx にリネーム
- * 3. ビルドを作成
+ * アクティブ時にアニメーションするシャボン玉エフェクトを表示
+ * 重要: Shader は必ず Rect などの Shape の子要素として使用すること
  */
 export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
     onPress,
@@ -51,17 +39,6 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
     }, []);
     
     const shader = getShabonShader();
-    
-    // デバッグ用ログ
-    useEffect(() => {
-        console.log('[ShabonTabButton] 🧪 TEST MODE - Shader loaded:', !!shader);
-        console.log('[ShabonTabButton] 🧪 TEST MODE - Shader object:', shader);
-        console.log('[ShabonTabButton] 🧪 TEST MODE - isActive:', isActive);
-        console.log('[ShabonTabButton] 🧪 TEST MODE - time.value:', time.value);
-        console.log('[ShabonTabButton] 🧪 TEST MODE - size:', size);
-        console.log('[ShabonTabButton] 🧪 TEST MODE - vec(size, size):', vec(size, size));
-    }, [shader, isActive]);
-    
     const borderRadius = size / 2;
     
     return (
@@ -81,41 +58,23 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                 StyleSheet.absoluteFill,
                 { borderRadius: borderRadius, overflow: 'hidden' }
             ]}>
-                {/* 🧪 TEST: Canvasの可視性テスト用に背景色追加 */}
-                <View style={[
-                    StyleSheet.absoluteFill,
-                    { 
-                        backgroundColor: 'rgba(255,0,0,0.3)',  // 🔴 赤い背景でCanvas領域を確認
-                        zIndex: 0 
-                    }
-                ]} />
-                
-                {/* 🧪 TEST: Shader を最優先で描画 */}
-                <Canvas style={[
-                    StyleSheet.absoluteFill, 
-                    { 
-                        zIndex: 1,
-                        backgroundColor: 'rgba(0,255,0,0.3)'  // 🟢 緑の背景でCanvas自体を確認
-                    }
-                ]}>
-                    {/* 🧪 TEST: Shader を Rect で描画 */}
-                    {simpleShaderSource ? (
+                {shader && isActive && (
+                    <Canvas style={StyleSheet.absoluteFill}>
                         <Rect x={0} y={0} width={size} height={size}>
                             <Shader
-                                source={simpleShaderSource}
+                                source={shader}
                                 uniforms={{
-                                    resolution: vec(size, size),
+                                    iTime: time.value,
+                                    iResolution: vec(size, size),
+                                    iIsDark: isDark ? 1.0 : 0.0,
+                                    iRoundness: 1.0,
+                                    iRainbowStrength: 2.0,
+                                    iFillAlpha: 0.3,
                                 }}
                             />
                         </Rect>
-                    ) : (
-                        <>
-                            {/* 🔵 Shader がない場合のフォールバック */}
-                            <Fill color="rgba(0,0,255,0.5)" />
-                            <Circle cx={size / 2} cy={size / 2} r={size / 3} color="cyan" />
-                        </>
-                    )}
-                </Canvas>
+                    </Canvas>
+                )}
             </View>
             
             {/* 子要素（アイコンなど） */}

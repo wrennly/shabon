@@ -4,7 +4,6 @@ let _shader: ReturnType<typeof Skia.RuntimeEffect.Make> | null = null;
 
 export const getShabonShader = () => {
     if (!_shader && Skia) {
-        console.log('[ShabonShader] Attempting to create shader...');
         try {
             _shader = Skia.RuntimeEffect.Make(`
 uniform float iTime;
@@ -271,12 +270,9 @@ vec4 main(vec2 fragCoord) {
     return vec4(finalColor * alpha, alpha);
 }
 `);
-            console.log('[ShabonShader] ✅ Shader created successfully!');
         } catch (e) {
-            console.warn("[ShabonShader] ❌ Skia RuntimeEffect creation failed:", e);
+            console.warn("[ShabonShader] Skia RuntimeEffect creation failed:", e);
         }
-    } else if (!Skia) {
-        console.warn("[ShabonShader] ⚠️ Skia is not available!");
     }
     return _shader;
 };
