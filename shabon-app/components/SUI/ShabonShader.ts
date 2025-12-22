@@ -210,7 +210,7 @@ vec4 main(vec2 fragCoord) {
     float rainbowDepth = smoothstep(0.3, 0.5, dist) * rainbowMask;
     
     // 虹のエリアに微細なスペキュラハイライト（光沢感）
-    vec3 rainbowLightDir = normalize(vec3(-0.7, -0.7, 1.0)); // 左上からの光
+    vec3 rainbowLightDir = normalize(vec3(0.7, -0.7, 1.0)); // 右上からの光（x座標を正に変更）
     vec3 normal3D = normalize(vec3(p * 2.0, sqrt(max(0.0, 1.0 - dist * dist))));
     vec3 viewDir = vec3(0.0, 0.0, 1.0);
     vec3 halfVec = normalize(rainbowLightDir + viewDir);
