@@ -45,9 +45,11 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
     // デバッグ用ログ
     useEffect(() => {
         console.log('[ShabonTabButton] 🧪 TEST MODE - Shader loaded:', !!shader);
+        console.log('[ShabonTabButton] 🧪 TEST MODE - Shader object:', shader);
         console.log('[ShabonTabButton] 🧪 TEST MODE - isActive:', isActive);
         console.log('[ShabonTabButton] 🧪 TEST MODE - time.value:', time.value);
         console.log('[ShabonTabButton] 🧪 TEST MODE - size:', size);
+        console.log('[ShabonTabButton] 🧪 TEST MODE - vec(size, size):', vec(size, size));
     }, [shader, isActive]);
     
     const borderRadius = size / 2;
@@ -78,7 +80,7 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                     }
                 ]} />
                 
-                {/* 🧪 TEST: シンプルなCanvas描画テスト */}
+                {/* 🧪 TEST: Shader を最優先で描画 */}
                 <Canvas style={[
                     StyleSheet.absoluteFill, 
                     { 
@@ -86,12 +88,8 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                         backgroundColor: 'rgba(0,255,0,0.3)'  // 🟢 緑の背景でCanvas自体を確認
                     }
                 ]}>
-                    {/* 🔵 青い円を描画（Shaderなし） - これが見えればCanvasは動いてる */}
-                    <Fill color="rgba(0,0,255,0.5)" />
-                    <Circle cx={size / 2} cy={size / 2} r={size / 3} color="cyan" />
-                    
-                    {/* 🌈 Shader（これが見えない） */}
-                    {shader && (
+                    {/* 🌈 Shader（最初に描画） */}
+                    {shader ? (
                         <Shader
                             source={shader}
                             uniforms={{
@@ -103,6 +101,12 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                                 iFillAlpha: 0.3,
                             }}
                         />
+                    ) : (
+                        <>
+                            {/* 🔵 Shader がない場合のフォールバック */}
+                            <Fill color="rgba(0,0,255,0.5)" />
+                            <Circle cx={size / 2} cy={size / 2} r={size / 3} color="cyan" />
+                        </>
                     )}
                 </Canvas>
             </View>
