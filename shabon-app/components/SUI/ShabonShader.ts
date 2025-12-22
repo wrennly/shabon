@@ -171,11 +171,11 @@ vec4 main(vec2 fragCoord) {
     // 4. Specular Highlights (Gloss)
     float highlight = smoothstep(0.65, 0.7, f) * 0.5; // Softer highlight
     
-    // 5. Top-Left White Highlight (新規追加)
-    // 左上に白いハイライトを追加（強度アップ）
-    vec2 highlightPos = vec2(-0.25, -0.25); // 左上の位置
+    // 5. Top-Right White Highlight (右上に移動)
+    // 右上に白いハイライトを追加（左上の虹を隠さないように）
+    vec2 highlightPos = vec2(0.25, -0.25); // 右上の位置（x座標を正に変更）
     float highlightDist = length(p - highlightPos);
-    float topLeftHighlight = smoothstep(0.35, 0.0, highlightDist) * 0.85; // 0.6 → 0.85 に強化、範囲も拡大
+    float topRightHighlight = smoothstep(0.35, 0.0, highlightDist) * 0.85; // 右上のハイライト
     
     // 6. Edge Glow (立体感のある縁の光 - LiquidGlass風)
     // ダークモードは縁を狭く
@@ -224,10 +224,10 @@ vec4 main(vec2 fragCoord) {
     // 虹のエリアに深度グラデーション（明るさの変化）
     baseColor = mix(baseColor, baseColor * 1.15, rainbowDepth * 0.3);
     
-    // Add top-left white highlight
-    // ダークモードは左上ハイライトも抑える（ただし強度アップ）
+    // Add top-right white highlight
+    // ダークモードは右上ハイライトも抑える（ただし強度アップ）
     float highlightStrength = mix(1.2, 0.5, iIsDark); // 1.0 → 1.2, 0.4 → 0.5 に強化
-    baseColor = mix(baseColor, vec3(1.0), topLeftHighlight * highlightStrength);
+    baseColor = mix(baseColor, vec3(1.0), topRightHighlight * highlightStrength);
     
     // Add edge glow (立体感のある縁の光)
     // ダークモードは縁の光沢を抑える（左上を強調）
@@ -255,8 +255,8 @@ vec4 main(vec2 fragCoord) {
     // Scale highlight by iFillAlpha to remove "white part" when transparent
     alpha += highlight * 0.6 * iFillAlpha;
     
-    // Top-left highlight alpha
-    alpha += topLeftHighlight * 0.5 * clamp(iRainbowStrength + iFillAlpha, 0.0, 1.0);
+    // Top-right highlight alpha
+    alpha += topRightHighlight * 0.5 * clamp(iRainbowStrength + iFillAlpha, 0.0, 1.0);
     
     // Edge glow alpha (縁の光の透明度)
     alpha += edgeGlow * 0.6;
