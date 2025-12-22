@@ -142,16 +142,19 @@ vec4 main(vec2 fragCoord) {
     float diagonalDist = abs(p.x - p.y);
     
     // 対角線上（左上↔右下）で虹が強く、離れるほど弱くなる
-    // smoothstep で滑らかに減衰
-    float diagonalMask = 1.0 - smoothstep(0.0, 0.4, diagonalDist);
+    // iRainbowStrength が高いほど、対角線マスクの範囲を広げる（上と左にも虹が広がる）
+    // 通常: 0.4, 強い時: 0.6-0.7 くらいまで広がる
+    float diagonalWidth = mix(0.4, 0.7, clamp((iRainbowStrength - 2.0) / 2.0, 0.0, 1.0));
+    float diagonalMask = 1.0 - smoothstep(0.0, diagonalWidth, diagonalDist);
     
     // 左上と右下で虹の強度を調整
     vec2 lightDir = normalize(vec2(-1.0, -1.0)); // Top-Left direction
     float lightDot = dot(normalize(p), lightDir); // 1.0 at Top-Left, -1.0 at Bottom-Right
     
     // 左上と右下の両方で虹を強く（中心付近は弱く）
-    // 左上のエリアを広げる（-0.3 → -0.5, 0.8 → 1.0）
-    float topLeftStrength = smoothstep(-0.5, 1.0, lightDot);      // 左上が強い（エリア拡大）
+    // iRainbowStrength が高いほど、左上のエリアをさらに広げる
+    float topLeftStart = mix(-0.5, -0.7, clamp((iRainbowStrength - 2.0) / 2.0, 0.0, 1.0));
+    float topLeftStrength = smoothstep(topLeftStart, 1.0, lightDot);      // 左上が強い（エリア拡大）
     float bottomRightStrength = smoothstep(-0.8, 0.3, -lightDot); // 右下が強い
     float cornerStrength = max(topLeftStrength, bottomRightStrength);
     

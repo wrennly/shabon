@@ -68,10 +68,10 @@ export const ShabonTabButton: React.FC<ShabonTabButtonProps> = ({
                                     iResolution: vec(size, size),
                                     iIsDark: isDark ? 1.0 : 0.0,
                                     iRoundness: 1.0,
-                                    // 選択時: 虹を強く (2.0), 非選択時: 虹を控えめに (0.8)
-                                    iRainbowStrength: isActive ? 2.0 : 0.8,
-                                    // 選択時: 少し不透明 (0.3), 非選択時: より透明 (0.15)
-                                    iFillAlpha: isActive ? 0.3 : 0.15,
+                                    // 選択時: 虹を非常に強く (3.5), 非選択時: 程よい虹 (2.0)
+                                    iRainbowStrength: isActive ? 3.5 : 2.0,
+                                    // 選択時: 少し不透明 (0.35), 非選択時: やや透明 (0.25)
+                                    iFillAlpha: isActive ? 0.35 : 0.25,
                                 }}
                             />
                         </Rect>
