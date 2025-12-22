@@ -133,18 +133,31 @@ vec4 main(vec2 fragCoord) {
     // lightingFactor is 1.0 at -2.35 (Top-Left). We want to REDUCE rainbow there.
     // So we invert it: 1.0 - lightingFactor (normalized)
     
-    // Simpler approach: Use dot product with light direction vector
+    // 対角線マスク: 左上 ↔ 右下 に虹を集中、右上と左下は虹を消す
+    // p.x と p.y の関係で対角線を判定
+    // 左上→右下の対角線: p.x ≈ p.y
+    // 右上→左下の対角線: p.x ≈ -p.y
+    
+    // 左上→右下の対角線からの距離（絶対値が小さいほど対角線上）
+    float diagonalDist = abs(p.x - p.y);
+    
+    // 対角線上（左上↔右下）で虹が強く、離れるほど弱くなる
+    // smoothstep で滑らかに減衰
+    float diagonalMask = 1.0 - smoothstep(0.0, 0.4, diagonalDist);
+    
+    // 左上と右下で虹の強度を調整
     vec2 lightDir = normalize(vec2(-1.0, -1.0)); // Top-Left direction
     float lightDot = dot(normalize(p), lightDir); // 1.0 at Top-Left, -1.0 at Bottom-Right
     
-    // Mask: 左上を明るく、右下を暗くして立体感を強調
-    // lightDot is 1.0 at Top-Left, -1.0 at Bottom-Right.
-    // We want 1.0 (Full) when lightDot is low (Bottom-Right).
-    // smoothstep(-0.2, 0.8, lightDot) -> 0.0 at Bottom-Right, 1.0 at Top-Left.
-    // Invert it to get the mask we want.
-    float lightingMask = 1.0 - smoothstep(-0.2, 0.8, lightDot); 
-    // 右下の虹を弱める（0.2 → 0.15 に変更）
-    lightingMask = max(0.15, lightingMask);
+    // 左上と右下の両方で虹を強く（中心付近は弱く）
+    float topLeftStrength = smoothstep(-0.3, 0.8, lightDot);      // 左上が強い
+    float bottomRightStrength = smoothstep(-0.8, 0.3, -lightDot); // 右下が強い
+    float cornerStrength = max(topLeftStrength, bottomRightStrength);
+    
+    // 対角線マスクと角の強度を合成
+    float lightingMask = diagonalMask * cornerStrength;
+    // 最小値を設定（完全に消えないように）
+    lightingMask = max(0.05, lightingMask);
     
     rainbowMask *= lightingMask;
     
