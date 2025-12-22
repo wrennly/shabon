@@ -200,8 +200,8 @@ vec4 main(vec2 fragCoord) {
     
     // --- Composition ---
     
-    // Center color: Light Grey for Light mode (白いハイライトを目立たせる), Transparent for Dark mode
-    vec3 centerColor = mix(vec3(0.88), vec3(0.0), iIsDark);
+    // Center color: Light Grey for Light mode, Dark Grey for Dark mode
+    vec3 centerColor = mix(vec3(0.88), vec3(0.2), iIsDark); // ダークモード: 0.0 → 0.2 (グレー)
     
     // Apply rainbow based on rainbowMask
     // Reduced mix strength to make rainbow more subtle (was 0.9, now 0.5)

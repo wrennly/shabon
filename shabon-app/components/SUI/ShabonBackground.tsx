@@ -11,14 +11,14 @@ interface ShabonBackgroundProps {
 /**
  * アプリ全体で使う共通背景グラデーション。
  * ライト: ほんのり青みがかった爽やかなグラデーション
- * ダーク: シャボン玉が映えるグレー - ダークグレーから少し明るいグレーへ
+ * ダーク: 夜空に浮かぶシャボン玉 - 深い青黒からオーロラのような淡い紫へ
  */
 export const ShabonBackground: React.FC<ShabonBackgroundProps> = ({ style }) => {
   const colorScheme = useColorScheme();
 
   const colors =
     colorScheme === 'dark'
-      ? (['#1a1a1a', '#252525', '#2a2a2a'] as const) // ダークグレー → ミディアムグレー → 少し明るいグレー
+      ? (['#0D1117', '#1a1f2e', '#1e2a3a'] as const) // 夜空 → 深い青 → 少し明るい青紫
       : (['#F5F8FF', '#E5F4FF', '#EDE5FF'] as const); // 爽やかな青白 → 薄い水色 → 薄い紫
 
   return (
