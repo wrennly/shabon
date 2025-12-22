@@ -66,16 +66,21 @@ export default function LoginScreen() {
       // display_name が未設定なら初回登録画面へ
       if (!user.display_name || user.display_name.trim() === '') {
         await logToDiscord('➡️ オンボーディング画面へ遷移');
-        router.replace('/onboarding');
+        // router.replace() の代わりに push() を使用（Expo Router 6の不具合対策）
+        router.push('/onboarding');
       } else {
-        await logToDiscord('➡️ チャット画面へ遷移');
-        router.replace('/(tabs)/chat');
+        await logToDiscord('➡️ チャット画面へ遷移', { 
+          route: '/(tabs)/chat',
+          method: 'push' 
+        });
+        // router.replace() の代わりに push() を使用（Expo Router 6の不具合対策）
+        router.push('/(tabs)/chat');
       }
     } catch (error: any) {
       await logErrorToDiscord('❌ ログイン後の処理でエラー', error);
       // エラー時はとりあえずチャット画面へ
       await logToDiscord('⚠️ エラーのためチャット画面へ遷移');
-      router.replace('/(tabs)/chat');
+      router.push('/(tabs)/chat');
     }
   };
 
