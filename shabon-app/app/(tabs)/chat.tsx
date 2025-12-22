@@ -132,7 +132,7 @@ export default function MatesScreen() {
 
   const handleMateSelect = (mate: Mate) => {
     router.push({
-      pathname: `/chat/${mate.id}`,
+      pathname: `/chat/${mate.id}` as any,
       params: {
         mateName: mate.mate_name,
         mateImageUrl: mate.image_url || '',
