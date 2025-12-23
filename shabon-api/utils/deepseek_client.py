@@ -2,13 +2,14 @@
 """
 DeepSeek API Client
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DeepSeek v3を使った会話生成（非同期対応）
+DeepSeek v3を使った会話生成（非同期対応 + リトライロジック）
 """
 
 import os
 from typing import List, Dict, Optional
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APIError, APITimeoutError, RateLimitError
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,48 @@ class DeepSeekClient:
         
         self.client = AsyncOpenAI(
             api_key=self.api_key,
-            base_url=base_url
+            base_url=base_url,
+            timeout=120.0,  # DeepSeekの推論時間を考慮して120秒に設定
+            max_retries=0,  # 自前のリトライロジックを使用
         )
         self.model = "deepseek-chat"
+    
+    async def _retry_with_backoff(self, func, max_retries=3):
+        """
+        指数バックオフによるリトライロジック
+        
+        Args:
+            func: 実行する非同期関数
+            max_retries: 最大リトライ回数
+            
+        Returns:
+            関数の実行結果
+        """
+        for attempt in range(max_retries):
+            try:
+                return await func()
+            except (APIError, APITimeoutError) as e:
+                # 一時的なエラー（502, 503, タイムアウト）
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # 1秒, 2秒, 4秒...
+                    logger.warning(f"DeepSeek API error (attempt {attempt + 1}/{max_retries}): {str(e)}. Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"DeepSeek API error after {max_retries} attempts: {str(e)}")
+                    raise
+            except RateLimitError as e:
+                # レート制限エラー（429）
+                if attempt < max_retries - 1:
+                    wait_time = 10 * (attempt + 1)  # 10秒, 20秒, 30秒...
+                    logger.warning(f"DeepSeek rate limit (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"DeepSeek rate limit exceeded after {max_retries} attempts")
+                    raise
+            except Exception as e:
+                # その他のエラーは即座に送出
+                logger.error(f"DeepSeek unexpected error: {str(e)}")
+                raise
     
     async def chat(
         self,
@@ -54,19 +94,19 @@ class DeepSeekClient:
         Returns:
             AI response text
         """
-        try:
-            # Build messages
-            messages = [
-                {"role": "system", "content": system_prompt}
-            ]
-            
-            # Add history
-            messages.extend(history)
-            
-            # Add current message
-            messages.append({"role": "user", "content": user_message})
-            
-            # Call API (async)
+        # Build messages
+        messages = [
+            {"role": "system", "content": system_prompt}
+        ]
+        
+        # Add history
+        messages.extend(history)
+        
+        # Add current message
+        messages.append({"role": "user", "content": user_message})
+        
+        # リトライロジック付きでAPI呼び出し
+        async def _call_api():
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -74,17 +114,16 @@ class DeepSeekClient:
                 max_tokens=max_tokens,
                 stream=False
             )
-            
-            # Extract response
-            ai_message = response.choices[0].message.content
-            
-            logger.info(f"DeepSeek response generated (tokens: {response.usage.total_tokens})")
-            
-            return ai_message
+            return response
         
-        except Exception as e:
-            logger.error(f"DeepSeek API error: {str(e)}")
-            raise
+        response = await self._retry_with_backoff(_call_api)
+        
+        # Extract response
+        ai_message = response.choices[0].message.content
+        
+        logger.info(f"DeepSeek response generated (tokens: {response.usage.total_tokens})")
+        
+        return ai_message
     
     async def generate_summary(
         self,
@@ -114,7 +153,8 @@ class DeepSeekClient:
 【要約】
 """
         
-        try:
+        # リトライロジック付きでAPI呼び出し
+        async def _call_api():
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -124,13 +164,12 @@ class DeepSeekClient:
                 temperature=0.3,
                 max_tokens=500
             )
-            
-            summary = response.choices[0].message.content
-            logger.info("DeepSeek summary generated")
-            
-            return summary
+            return response
         
-        except Exception as e:
-            logger.error(f"DeepSeek summary generation error: {str(e)}")
-            raise
+        response = await self._retry_with_backoff(_call_api)
+        
+        summary = response.choices[0].message.content
+        logger.info("DeepSeek summary generated")
+        
+        return summary
 
