@@ -4,6 +4,7 @@ openai
 requests
 fastapi
 uvicorn[standard]
+gunicorn
 pydantic
 fastapi-cors
 psycopg2-binary
