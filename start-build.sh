@@ -45,3 +45,9 @@ npx expo run:android
 
 # 本番同様に動かす
 cd /Users/ken/dev/shabon/shabon-app && npx expo run:ios --configuration Release
+
+# XcodeのDerivedDataを削除
+rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# 過去のアーカイブを削除
+open ~/Library/Developer/Xcode/Archives

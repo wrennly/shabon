@@ -56,7 +56,8 @@ def get_embedding(text: str) -> Optional[List[float]]:
         response = jina_client.embeddings.create(
             model="jina-embeddings-v3",
             input=[text],  # input should be a list
-            dimensions=1024  # Maximum dimension for jina-embeddings-v3
+            dimensions=1024,  # Maximum dimension for jina-embeddings-v3
+            encoding_format="float"  # Jina APIは"float"のみサポート（base64不可）
         )
         embedding = response.data[0].embedding
         print(f"🔧 Embedding dimension: {len(embedding)}")
