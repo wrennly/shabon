@@ -19,6 +19,7 @@ import { apiClient } from '@/services/api';
 import { ShabonBackground } from '@/components/SUI/ShabonBackground';
 import { resetHeaderAnimation, prepareHeaderAnimation } from '@/components/app-header';
 import { logToDiscord, logErrorToDiscord, logSuccessToDiscord } from '@/utils/discord-logger';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,6 +33,9 @@ export default function LoginScreen() {
   const theme = Colors[colorScheme ?? 'light'];
   const [loading, setLoading] = useState(false);
   const [testLoginLoading, setTestLoginLoading] = useState(false);
+  
+  // 開発環境かどうかを判定
+  const isDevelopment = Constants.expoConfig?.extra?.environment === 'development' || __DEV__;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
@@ -94,20 +98,29 @@ export default function LoginScreen() {
       
       await logToDiscord('📥 Google認証結果を受信', {
         type: result?.type,
-        hasIdToken: !!result?.authentication?.idToken,
-        hasAccessToken: !!result?.authentication?.accessToken,
+        hasIdToken: !!(result as any)?.authentication?.idToken,
+        hasAccessToken: !!(result as any)?.authentication?.accessToken,
       });
 
-      if (result?.type === 'success' && result.authentication?.idToken) {
+      if (
+        result?.type === 'success' &&
+        (result as any)?.authentication &&
+        typeof (result as any).authentication.idToken === 'string' &&
+        (result as any).authentication.idToken.length > 0
+      ) {
+        const idToken = (result as any).authentication.idToken;
         await logToDiscord('📤 Supabaseに送信開始', {
-          tokenPreview: result.authentication.idToken.substring(0, 30) + '...',
+          tokenPreview: idToken.substring(0, 30) + '...',
         });
-        
-        await authService.signInWithGoogle(result.authentication.idToken);
-        
+
+        if (!idToken) {
+          throw new Error('Google認証IDトークンが取得できませんでした');
+        }
+
+        await authService.signInWithGoogle(idToken);
+
         await logSuccessToDiscord('Google Sign-In成功！');
         await navigateAfterLogin();
-      } else {
         await logToDiscord('ℹ️ Google認証キャンセルまたは失敗', { resultType: result?.type });
         setLoading(false);
       }
@@ -242,20 +255,22 @@ export default function LoginScreen() {
           </Pressable>
         )}
 
-        {/* Google ログイン */}
-        <Pressable onPress={handleGoogleLogin} disabled={!request || loading} style={styles.glassButtonWrapper}>
-          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
-            <GlassView style={styles.glassButton} isInteractive>
-              <Ionicons name="logo-google" size={20} color={theme.glassText} />
-              <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Googleで続行</Text>
-            </GlassView>
-          ) : (
-            <View style={[styles.fallbackButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-              <Ionicons name="logo-google" size={20} color={theme.glassText} />
-              <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Googleで続行</Text>
-            </View>
-          )}
-        </Pressable>
+        {/* Google ログイン（開発環境のみ） */}
+        {isDevelopment && (
+          <Pressable onPress={handleGoogleLogin} disabled={!request || loading} style={styles.glassButtonWrapper}>
+            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+              <GlassView style={styles.glassButton} isInteractive>
+                <Ionicons name="logo-google" size={20} color={theme.glassText} />
+                <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Googleで続行</Text>
+              </GlassView>
+            ) : (
+              <View style={[styles.fallbackButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+                <Ionicons name="logo-google" size={20} color={theme.glassText} />
+                <Text style={[styles.glassButtonText, { color: theme.glassText }]}>Googleで続行</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
 
         {loading && (
           <View style={styles.loadingOverlay}>
@@ -263,20 +278,22 @@ export default function LoginScreen() {
           </View>
         )}
 
-        {/* テストユーザーログイン（TestFlight用） */}
-        <Pressable onPress={handleTestLogin} disabled={testLoginLoading} style={[styles.glassButtonWrapper, { marginTop: 24 }]}>
-          {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
-            <GlassView style={styles.glassButton} isInteractive>
-              <Ionicons name="person-outline" size={20} color={theme.glassText} />
-              <Text style={[styles.glassButtonText, { color: theme.glassText, fontSize: 14 }]}>テストユーザー</Text>
-            </GlassView>
-          ) : (
-            <View style={[styles.fallbackButton, { backgroundColor: 'rgba(128,128,128,0.3)' }]}>
-              <Ionicons name="person-outline" size={20} color={theme.text} />
-              <Text style={[styles.glassButtonText, { color: theme.text, fontSize: 14 }]}>テストユーザー</Text>
-            </View>
-          )}
-        </Pressable>
+        {/* テストユーザーログイン（開発環境のみ） */}
+        {isDevelopment && (
+          <Pressable onPress={handleTestLogin} disabled={testLoginLoading} style={[styles.glassButtonWrapper, { marginTop: 24 }]}>
+            {Platform.OS === 'ios' && isLiquidGlassAvailable() ? (
+              <GlassView style={styles.glassButton} isInteractive>
+                <Ionicons name="person-outline" size={20} color={theme.glassText} />
+                <Text style={[styles.glassButtonText, { color: theme.glassText, fontSize: 14 }]}>テストユーザー</Text>
+              </GlassView>
+            ) : (
+              <View style={[styles.fallbackButton, { backgroundColor: 'rgba(128,128,128,0.3)' }]}>
+                <Ionicons name="person-outline" size={20} color={theme.text} />
+                <Text style={[styles.glassButtonText, { color: theme.text, fontSize: 14 }]}>テストユーザー</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
