@@ -1,5 +1,13 @@
 {
   "ios": {
-    "bundleIdentifier": "com.looseandkeen.shabon"
+    "bundleIdentifier": "com.looseandkeen.shabon",
+    "infoPlist": {
+      "ITSAppUsesNonExemptEncryption": false
+    }
+  },
+  "extra": {
+    "eas": {
+      "projectId": "a8629c36-0e43-4cd8-b2f2-f8d4bcbe5ca1"
+    }
   }
 }
