@@ -16,7 +16,7 @@
       },
       "supportsTablet": true,
       "bundleIdentifier": "com.looseandkeen.shabon",
-      "buildNumber": "39",
+      "buildNumber": "41",
       "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -90,7 +90,7 @@
       "feedbackFormUrl": "https://forms.gle/bWYV5a5iGiqabK289",
       "privacyPolicyUrl": "https://shabon.app/privacy",
       "sentryDsn": "",
-      "environment": "development",
+      "environment": "production",
       "gaMeasurementId": "",
       "googleClientId": "",
       "router": {}
