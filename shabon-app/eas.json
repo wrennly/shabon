@@ -14,7 +14,6 @@
     },
     "production": {
       "channel": "production",
-      "autoSubmit": true,
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production"
       },
