@@ -60,3 +60,4 @@ alembic/versions/__pycache__/
 
 # Workspaces
 *.code-workspace
+node_modules
