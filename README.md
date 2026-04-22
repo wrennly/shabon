@@ -1,5 +1,15 @@
 # Shabon
 
+<p align="left">
+  <img src="shabon-app/assets/images/Icon-iOS-Default-1024x1024@1x.png" width="96" alt="Shabon app icon"/>
+</p>
+
+[![license](https://img.shields.io/github/license/wrennly/shabon?style=flat-square)](./LICENSE)
+[![status](https://img.shields.io/badge/status-portfolio-orange?style=flat-square)](#開発背景)
+[![platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-black?style=flat-square)](#構成)
+[![Expo](https://img.shields.io/badge/Expo-54-000020?style=flat-square&logo=expo&logoColor=white)](https://expo.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+
 AI キャラクター「メイト」と深い対話を楽しむ iOS アプリ。
 **記憶を持つ AI との、親密で手触りのある会話体験**を目指して設計した個人開発モバイルアプリ。
 
@@ -62,7 +72,7 @@ shabon/
 
 ## ライセンス
 
-個人ポートフォリオ用リポジトリ。学習・参考目的での閲覧 OK、商用利用や直接的な流用はご遠慮ください。
+[MIT](./LICENSE). 自由に読んで、試して、フォークして、作り変えてください。
 
 ## 関連プロジェクト
 
